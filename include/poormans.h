@@ -9,7 +9,6 @@
 
 // TODO: support anything but Windows.
 #include <windows.h>
-#define poor_sleepMs Sleep
 #include <io.h>
 
 #define POOR_MAX_WIDTH (200)
@@ -209,7 +208,7 @@ static void poor_handle_input() {
 	if (!count)
 		return;
 
-	INPUT_RECORD records[10];
+	INPUT_RECORD records[10] = {0};
 	ReadConsoleInput(poor_input, records, sizeof(records) / sizeof(*records), &count);
 	poor_memcpy(&poor_kbd_then, &poor_kbd_now, sizeof(poor_kbd_then));
 
@@ -237,20 +236,24 @@ static void poor_blit() {
 			if (!poor_memcmp(front, back, sizeof(poor_cell)))
 				continue;
 
-			if (console_y != y || console_x != x - 1) {
-				COORD coord = {0};
-				coord.X = x, coord.Y = y;
-				SetConsoleCursorPosition(poor_output, coord);
-			}
+			if (console_y != y || console_x != x - 1)
+				SetConsoleCursorPosition(poor_output, (COORD){.X = x, .Y = y});
 			console_x = x, console_y = y;
 
 			if (front->fg != console_fg || front->bg != console_bg)
-				SetConsoleTextAttribute(poor_output, 16 * front->bg + front->fg);
+				SetConsoleTextAttribute(poor_output, (front->bg << 4) | front->fg);
 			console_fg = front->fg, console_bg = front->bg;
 
 			write(1, &front->chr, 1);
 			*back = *front;
 		}
+}
+
+static void poor_end_frame() {
+	const clock_t frame_end = clock();
+	const uint32_t deltaMs = ((((uint32_t)frame_end) - ((uint32_t)poor_frame_start)) * 1000) / CLOCKS_PER_SEC;
+	if (deltaMs < POOR_REFRESH_RATE)
+		Sleep(POOR_REFRESH_RATE - deltaMs);
 }
 
 #endif
@@ -262,11 +265,7 @@ void poor_tick()
 	SetConsoleTitle(poor_title_buf);
 	poor_handle_input();
 	poor_blit();
-
-	const clock_t frame_end = clock();
-	const uint32_t deltaMs = ((((uint32_t)frame_end) - ((uint32_t)poor_frame_start)) * 1000) / CLOCKS_PER_SEC;
-	if (deltaMs < POOR_REFRESH_RATE)
-		poor_sleepMs(POOR_REFRESH_RATE - deltaMs);
+	poor_end_frame();
 }
 #else
 	;

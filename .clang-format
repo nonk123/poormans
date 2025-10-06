@@ -20,6 +20,6 @@ AlwaysBreakAfterReturnType: None
 AccessModifierOffset: -8
 IndentCaseLabels: true
 AlignAfterOpenBracket: DontAlign
-SortIncludes: CaseSensitive
+SortIncludes: Never
 InsertNewlineAtEOF: true
 InsertBraces: false
