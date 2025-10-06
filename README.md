@@ -1,6 +1,6 @@
 # poormans
 
-The kind of shit a morgue IT technician comes up with when there's nothing to do, but their computer is able to compile plain C and doesn't support OpenGL. Basic-ass graphics in the Windows console for all kinds of Pentium-III machines.
+The kind of shit a morgue IT technician comes up with when there's nothing to do, but their computer is able to compile C and doesn't support OpenGL. Text-mode graphics inside the Windows console for all kinds of Pentium-III machines, contained within a single header file.
 
 ## Usage
 
@@ -38,4 +38,8 @@ int main(int argc, char* argv[]) {
 
 You'll most likely want to use `poor_at(x, y)` to put character cells on the screen. Set `chr` field to display an ASCII character inside that cell. Modify `fg` & `bg` to one of the `POOR_*` color constants to add colors to your cells. The screen is cleared with whitespace automatically at the start of each frame.
 
-TODO: add keyboard & mouse input.
+You can use `poor_keydown(scancode)` to respond to keypresses. Pass one of the `POOR_*` scancode constants to see if specified key is held down at the moment.
+
+TODO: add a "was key just pressed?" function.
+
+TODO: add & document mouse input.
