@@ -30,6 +30,12 @@ typedef struct {
 	uint8_t fg : 4, bg : 4, chr;
 } poor_cell;
 
+/// Return console buffer width in character increments.
+int poor_width();
+
+/// Return console buffer height in character increments.
+int poor_height();
+
 enum {
 	POOR_BLACK,
 	POOR_BLUE,
@@ -72,7 +78,7 @@ static HWND poor_window;
 
 static char poor_title_buf[128] = POOR_DEFAULT_TITLE;
 
-static int poor_width = 0, poor_height = 0;
+static int poor_window_width = 0, poor_window_height = 0;
 static poor_cell poor_front[POOR_DISPLAY_AREA] = {0}, poor_back[POOR_DISPLAY_AREA] = {0};
 
 static poor_kbd_state poor_kbd_now = {0}, poor_kbd_then = {0};
@@ -95,18 +101,26 @@ static void poor_fetch_window_size() {
 		new_width = POOR_MAX_WIDTH;
 	if (new_height > POOR_MAX_HEIGHT)
 		new_height = POOR_MAX_HEIGHT;
-	if (poor_width != new_width || poor_height != new_height) {
+	if (poor_window_width != new_width || poor_window_height != new_height) {
 		poor_memset(poor_back, 0, sizeof(poor_back));
 		poor_set_cursor_hidden(1);
 	}
-	poor_width = new_width, poor_height = new_height;
+	poor_window_width = new_width, poor_window_height = new_height;
 }
 
 static poor_cell* poor_atEx(poor_cell* ptr, int x, int y) {
 	static poor_cell deflt = {0};
-	if (x < 0 || y < 0 || x >= poor_width || y >= poor_height)
+	if (x < 0 || y < 0 || x >= poor_width() || y >= poor_height())
 		return &deflt;
-	return &ptr[y * poor_width + x];
+	return &ptr[y * poor_width() + x];
+}
+
+int poor_width() {
+	return poor_window_width;
+}
+
+int poor_height() {
+	return poor_window_height;
 }
 
 #endif
@@ -216,8 +230,8 @@ static void poor_handle_input() {
 
 static void poor_blit() {
 	int console_x = -2, console_y = 0, console_fg = -1, console_bg = -1;
-	for (int y = 0; y < poor_height; y++)
-		for (int x = 0; x < poor_width; x++) {
+	for (int y = 0; y < poor_height(); y++)
+		for (int x = 0; x < poor_width(); x++) {
 			const poor_cell* front = poor_atEx(poor_front, x, y);
 			poor_cell* back = poor_atEx(poor_back, x, y);
 			if (!poor_memcmp(front, back, sizeof(poor_cell)))
