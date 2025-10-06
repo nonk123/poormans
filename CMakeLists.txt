@@ -12,5 +12,10 @@ if(WIN32)
     target_link_libraries(poormans INTERFACE user32.lib)
 endif()
 
-add_executable(poormansTest ${CMAKE_CURRENT_SOURCE_DIR}/src/test.c)
-target_link_libraries(poormansTest PRIVATE poormans)
+function(add_toy NAME)
+    add_executable(poormans_${NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/${NAME}.c)
+    target_link_libraries(poormans_${NAME} PRIVATE poormans)
+endfunction()
+
+add_toy(test)
+add_toy(wolfen)
