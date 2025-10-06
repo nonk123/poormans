@@ -2,7 +2,7 @@
 
 The kind of shit a morgue IT technician comes up with when there's nothing to do, but their computer is able to compile C and doesn't support OpenGL. Text-mode graphics inside the Windows console for all kinds of Pentium-III machines, contained within a single header file.
 
-## Usage
+## Installation
 
 Use `FetchContent` with CMake to include this library in your project:
 
@@ -21,7 +21,9 @@ add_executable(myProgram ...)
 target_link_libraries(myProgram PRIVATE poormans)
 ```
 
-Then in your C code, use the following boilerplate/template for `main.c` or such:
+## Usage
+
+In your C code, use the following boilerplate/template for `main.c` or such:
 
 ```c
 // Don't forget to compile the function definitions from `poormans`:
