@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 // TODO: support anything but Windows.
@@ -12,6 +13,10 @@
 #define POOR_MAX_WIDTH (200)
 #define POOR_MAX_HEIGHT (100)
 #define POOR_DISPLAY_AREA (POOR_MAX_WIDTH * POOR_MAX_HEIGHT)
+
+#ifndef POOR_DEFAULT_TITLE
+#define POOR_DEFAULT_TITLE "Poor Man's Graphics"
+#endif
 
 #ifndef POOR_REFRESH_HZ
 #define POOR_REFRESH_HZ (60)
@@ -59,7 +64,7 @@ enum {
 static HANDLE poor_input, poor_output;
 static HWND poor_window;
 
-static char poor_title[128] = "Poor Man's Graphics";
+static char poor_title_buf[128] = POOR_DEFAULT_TITLE;
 
 static int poor_width = 0, poor_height = 0;
 static poor_cell poor_front[POOR_DISPLAY_AREA] = {0}, poor_back[POOR_DISPLAY_AREA] = {0};
@@ -118,6 +123,17 @@ poor_cell* poor_at(int x, int y)
 	;
 #endif
 
+void poor_title(const char* title)
+#ifdef POOR_IMPLEMENTATION
+{
+	if (title == NULL)
+		title = POOR_DEFAULT_TITLE;
+	snprintf(poor_title_buf, sizeof(poor_title_buf), "%s", title);
+}
+#else
+	;
+#endif
+
 /// Initialize poormans. Should be the initializer inside `for` boilerplate.
 void poor_init()
 #ifdef POOR_IMPLEMENTATION
@@ -153,7 +169,7 @@ int poor_running()
 void poor_tick()
 #ifdef POOR_IMPLEMENTATION
 {
-	SetConsoleTitle(poor_title);
+	SetConsoleTitle(poor_title_buf);
 
 	int console_x = -2, console_y = 0, console_fg = -1, console_bg = -1;
 	for (int y = 0; y < poor_height; y++)
