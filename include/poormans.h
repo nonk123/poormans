@@ -249,7 +249,7 @@ static void poor_blit() {
 			console_fg = front->fg, console_bg = front->bg;
 
 			write(1, &front->chr, 1);
-			poor_memcpy(back, front, sizeof(poor_cell));
+			*back = *front;
 		}
 }
 
