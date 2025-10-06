@@ -80,7 +80,7 @@ static char poor_title_buf[128] = POOR_DEFAULT_TITLE;
 static int poor_window_width = 0, poor_window_height = 0;
 static poor_cell poor_front[POOR_DISPLAY_AREA] = {0}, poor_back[POOR_DISPLAY_AREA] = {0};
 
-static poor_kbd_state poor_kbd_now = {0}, poor_kbd_then = {0};
+static poor_kbd_state poor_kbd_now = {0}, poor_kbd_just = {0};
 
 static int poor_request_exit = 0;
 static clock_t poor_frame_start;
@@ -156,12 +156,27 @@ void poor_title(const char* title)
 	;
 #endif
 
-/// Check if a key is down from the `POOR_*` keycode constants.
-int poor_keydown(uint8_t kbd)
+#ifdef POOR_IMPLEMENTATION
+static int poor_key_in(const poor_kbd_state* kbd, uint8_t scancode) {
+	return !!(kbd->buf[scancode / 8] & (1 << (scancode % 8)));
+}
+#endif
+
+/// Check if a key is held down. Pass one of the `POOR_*` keycode constants.
+int poor_key_down(uint8_t scancode)
 #ifdef POOR_IMPLEMENTATION
 {
-	const uint8_t mask = 1 << (kbd % 8);
-	return !!(poor_kbd_now.buf[kbd / 8] & mask);
+	return poor_key_in(&poor_kbd_now, scancode);
+}
+#else
+	;
+#endif
+
+/// Check if a key was just pressed. Pass one of the `POOR_*` keycode constants.
+int poor_key_pressed(uint8_t scancode)
+#ifdef POOR_IMPLEMENTATION
+{
+	return poor_key_in(&poor_kbd_just, scancode);
 }
 #else
 	;
@@ -210,7 +225,7 @@ static void poor_handle_input() {
 
 	INPUT_RECORD records[10] = {0};
 	ReadConsoleInput(poor_input, records, sizeof(records) / sizeof(*records), &count);
-	poor_memcpy(&poor_kbd_then, &poor_kbd_now, sizeof(poor_kbd_then));
+	poor_memset(&poor_kbd_just, 0, sizeof(poor_kbd_just));
 
 	for (DWORD i = 0; i < count; i++) {
 		if (records[i].EventType != KEY_EVENT)
@@ -220,9 +235,10 @@ static void poor_handle_input() {
 		if (kbd < 1 || kbd >= 256)
 			continue;
 		const uint8_t mask = 1 << (kbd % 8);
-		if (event.bKeyDown)
+		if (event.bKeyDown) {
 			poor_kbd_now.buf[kbd / 8] |= mask;
-		else
+			poor_kbd_just.buf[kbd / 8] |= mask;
+		} else
 			poor_kbd_now.buf[kbd / 8] &= ~mask;
 	}
 }

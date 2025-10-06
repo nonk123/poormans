@@ -40,8 +40,6 @@ int main(int argc, char* argv[]) {
 
 You'll most likely want to use `poor_at(x, y)` to put character cells on the screen. Set `chr` field to display an ASCII character inside that cell. Modify `fg` & `bg` to one of the `POOR_*` color constants to add colors to your cells. The screen is cleared with whitespace automatically at the start of each frame.
 
-You can use `poor_keydown(scancode)` to respond to keypresses. Pass one of the `POOR_*` scancode constants to see if specified key is held down at the moment.
+You can use `poor_key_down(scancode)` and `poor_key_pressed(scancode)` to respond to keypresses. Pass one of the `POOR_*` scancode constants to `poor_key_down` to check if key is held down at the moment, or to `poor_key_pressed` to check if the key was just pressed. `poor_key_down` will signal continuously as long as the key is held, while `poor_key_pressed` will trigger once and then continuously according to system's key repeat interval.
 
-TODO: add a "was key just pressed?" function.
-
-TODO: add & document mouse input.
+TODO: implement & document mouse input.

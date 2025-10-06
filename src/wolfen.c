@@ -91,12 +91,12 @@ int main(int argc, char* argv[]) {
 
 	for (poor_init(); poor_running(); poor_tick()) {
 		poor_title("Wolfenstein -1");
-		if (poor_keydown(POOR_ESC))
+		if (poor_key_down(POOR_ESC))
 			poor_exit();
 
-		player.angle += 0.1f * (real)(poor_keydown(POOR_KP_6) - poor_keydown(POOR_KP_4));
+		player.angle += 0.1f * (real)(poor_key_down(POOR_KP_6) - poor_key_down(POOR_KP_4));
 
-		realc mv = poor_keydown(POOR_KP_8) - poor_keydown(POOR_KP_2), ang = player.angle;
+		realc mv = poor_key_down(POOR_KP_8) - poor_key_down(POOR_KP_2), ang = player.angle;
 		realc vel = mv * 3.f / POOR_REFRESH_HZ, mx = rcos(ang), my = rsin(ang);
 		player.x += mx * vel, player.y += my * vel;
 
