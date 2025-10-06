@@ -9,6 +9,7 @@ add_library(poormans INTERFACE)
 target_include_directories(poormans INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 if(WIN32)
     target_link_options(poormans INTERFACE $<IF:$<BOOL:${MSVC}>,/SUBSYSTEM:CONSOLE,-mconsole>)
+    target_link_libraries(poormans INTERFACE user32.lib)
 endif()
 
 add_executable(poormansTest ${CMAKE_CURRENT_SOURCE_DIR}/src/test.c)
