@@ -3,7 +3,6 @@
 #include <memory.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -52,6 +51,94 @@ enum {
 	POOR_BRIGHT_PURPLE,
 	POOR_BRIGHT_YELLOW,
 	POOR_BRIGHT_WHITE,
+};
+
+enum {
+	POOR_KEY_MIN,
+	POOR_ESC,
+	POOR_1,
+	POOR_2,
+	POOR_3,
+	POOR_4,
+	POOR_5,
+	POOR_6,
+	POOR_7,
+	POOR_8,
+	POOR_9,
+	POOR_0,
+	POOR_HYPHEN,
+	POOR_EQUALS,
+	POOR_BACKSPACE,
+	POOR_TAB,
+	POOR_Q,
+	POOR_W,
+	POOR_E,
+	POOR_R,
+	POOR_T,
+	POOR_Y,
+	POOR_U,
+	POOR_I,
+	POOR_O,
+	POOR_P,
+	POOR_LEFT_BRACKET,
+	POOR_RIGHT_BRACKET,
+	POOR_ENTER,
+	POOR_LCTRL,
+	POOR_A,
+	POOR_S,
+	POOR_D,
+	POOR_F,
+	POOR_G,
+	POOR_H,
+	POOR_J,
+	POOR_K,
+	POOR_L,
+	POOR_SEMICOLON,
+	POOR_QUOTE,
+	POOR_GRAVE, // aka tilde
+	POOR_LSHIFT,
+	POOR_BACKSLASH,
+	POOR_Z,
+	POOR_X,
+	POOR_C,
+	POOR_V,
+	POOR_B,
+	POOR_N,
+	POOR_M,
+	POOR_COMMA,
+	POOR_FULL_STOP,
+	POOR_SLASH,
+	POOR_RSHIFT,
+	POOR_PRT_SCR,
+	POOR_LALT,
+	POOR_SPACEBAR,
+	POOR_CAPS_LOCK,
+	POOR_F1,
+	POOR_F2,
+	POOR_F3,
+	POOR_F4,
+	POOR_F5,
+	POOR_F6,
+	POOR_F7,
+	POOR_F8,
+	POOR_F9,
+	POOR_F10,
+	POOR_NUMLOCK,
+	POOR_SCROLL_LOCK,
+	POOR_KP_7,
+	POOR_KP_8,
+	POOR_KP_9,
+	POOR_KP_MINUS,
+	POOR_KP_4,
+	POOR_KP_5,
+	POOR_KP_6,
+	POOR_KP_PLUS,
+	POOR_KP_1,
+	POOR_KP_2,
+	POOR_KP_3,
+	POOR_KP_0,
+	POOR_KP_DOT,
+	POOR_KEY_MAX,
 };
 
 #ifdef POOR_IMPLEMENTATION
@@ -200,7 +287,7 @@ int poor_running()
 {
 	poor_frame_start = clock();
 	poor_fetch_window_size();
-	for (size_t i = 0; i < POOR_DISPLAY_AREA; i++) {
+	for (int i = 0; i < POOR_DISPLAY_AREA; i++) {
 		poor_front[i].fg = POOR_GRAY;
 		poor_front[i].bg = POOR_BLACK;
 		poor_front[i].chr = ' ';
@@ -218,7 +305,7 @@ int poor_running()
 #ifdef POOR_IMPLEMENTATION
 
 static void poor_handle_input() {
-	DWORD count = 0;
+	DWORD count = 0, i = 0;
 	GetNumberOfConsoleInputEvents(poor_input, &count);
 	if (!count)
 		return;
@@ -227,12 +314,12 @@ static void poor_handle_input() {
 	ReadConsoleInput(poor_input, records, sizeof(records) / sizeof(*records), &count);
 	poor_memset(&poor_kbd_just, 0, sizeof(poor_kbd_just));
 
-	for (DWORD i = 0; i < count; i++) {
+	for (; i < count; i++) {
 		if (records[i].EventType != KEY_EVENT)
 			continue;
 		KEY_EVENT_RECORD event = records[i].Event.KeyEvent;
 		WORD kbd = event.wVirtualScanCode;
-		if (kbd < 1 || kbd >= 256)
+		if (kbd <= POOR_KEY_MIN || kbd >= POOR_KEY_MAX)
 			continue;
 		const uint8_t mask = 1 << (kbd % 8);
 		if (event.bKeyDown) {
@@ -252,8 +339,11 @@ static void poor_blit() {
 			if (!poor_memcmp(front, back, sizeof(poor_cell)))
 				continue;
 
-			if (console_y != y || console_x != x - 1)
-				SetConsoleCursorPosition(poor_output, (COORD){.X = x, .Y = y});
+			if (console_y != y || console_x != x - 1) {
+				COORD coord = {0};
+				coord.X = (int16_t)x, coord.Y = (int16_t)y;
+				SetConsoleCursorPosition(poor_output, coord);
+			}
 			console_x = x, console_y = y;
 
 			if (front->fg != console_fg || front->bg != console_bg)
@@ -286,89 +376,3 @@ void poor_tick()
 #else
 	;
 #endif
-
-enum {
-	POOR_ESC = 1,
-	POOR_1,
-	POOR_2,
-	POOR_3,
-	POOR_4,
-	POOR_5,
-	POOR_6,
-	POOR_7,
-	POOR_8,
-	POOR_9,
-	POOR_0,
-	POOR_HYPHEN,
-	POOR_EQUALS,
-	POOR_BACKSPACE,
-	POOR_TAB,
-	POOR_Q,
-	POOR_W,
-	POOR_E,
-	POOR_R,
-	POOR_T,
-	POOR_Y,
-	POOR_U,
-	POOR_I,
-	POOR_O,
-	POOR_P,
-	POOR_LEFT_BRACKET,
-	POOR_RIGHT_BRACKET,
-	POOR_ENTER,
-	POOR_LCTRL,
-	POOR_A,
-	POOR_S,
-	POOR_D,
-	POOR_F,
-	POOR_G,
-	POOR_H,
-	POOR_J,
-	POOR_K,
-	POOR_L,
-	POOR_SEMICOLON,
-	POOR_QUOTE,
-	POOR_GRAVE, // aka tilde
-	POOR_LSHIFT,
-	POOR_BACKSLASH,
-	POOR_Z,
-	POOR_X,
-	POOR_C,
-	POOR_V,
-	POOR_B,
-	POOR_N,
-	POOR_M,
-	POOR_COMMA,
-	POOR_FULL_STOP,
-	POOR_SLASH,
-	POOR_RSHIFT,
-	POOR_PRT_SCR,
-	POOR_LALT,
-	POOR_SPACEBAR,
-	POOR_CAPS_LOCK,
-	POOR_F1,
-	POOR_F2,
-	POOR_F3,
-	POOR_F4,
-	POOR_F5,
-	POOR_F6,
-	POOR_F7,
-	POOR_F8,
-	POOR_F9,
-	POOR_F10,
-	POOR_NUMLOCK,
-	POOR_SCROLL_LOCK,
-	POOR_KP_7,
-	POOR_KP_8,
-	POOR_KP_9,
-	POOR_KP_MINUS,
-	POOR_KP_4,
-	POOR_KP_5,
-	POOR_KP_6,
-	POOR_KP_PLUS,
-	POOR_KP_1,
-	POOR_KP_2,
-	POOR_KP_3,
-	POOR_KP_0,
-	POOR_KP_DOT,
-};
