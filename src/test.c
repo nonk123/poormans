@@ -2,11 +2,11 @@
 #include "poormans.h"
 
 int main(int argc, char* argv[]) {
-	int x = 5, y = 5;
+	int x = 5, y = 10;
 	for (poor_init(); poor_running(); poor_tick()) {
 		poor_title("testing!!!");
-		poor_at(x, y)->chr = '@';
-		poor_at(x, y)->fg = POOR_RED;
+		poor_at(x, y / 2)->chr = '@';
+		poor_at(x, y / 2)->fg = POOR_RED;
 
 		if (poor_key_pressed(POOR_ESC) || (poor_key_down(POOR_LCTRL) && poor_key_pressed(POOR_C)))
 			poor_exit();
