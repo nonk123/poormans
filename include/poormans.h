@@ -10,8 +10,8 @@
 #include <windows.h>
 #include <io.h>
 
-#define POOR_MAX_WIDTH (200)
-#define POOR_MAX_HEIGHT (100)
+#define POOR_MAX_WIDTH (400)
+#define POOR_MAX_HEIGHT (140)
 #define POOR_DISPLAY_AREA (POOR_MAX_WIDTH * POOR_MAX_HEIGHT)
 
 #ifndef POOR_DEFAULT_TITLE
@@ -357,9 +357,9 @@ static void poor_blit() {
 
 static void poor_end_frame() {
 	const clock_t frame_end = clock();
-	const uint32_t deltaMs = ((((uint32_t)frame_end) - ((uint32_t)poor_frame_start)) * 1000) / CLOCKS_PER_SEC;
-	if (deltaMs < POOR_REFRESH_RATE)
-		Sleep(POOR_REFRESH_RATE - deltaMs);
+	const uint64_t delta_ms = ((((uint64_t)frame_end) - ((uint64_t)poor_frame_start)) * 1000) / CLOCKS_PER_SEC;
+	if (delta_ms < POOR_REFRESH_RATE)
+		Sleep(POOR_REFRESH_RATE - delta_ms);
 }
 
 #endif
