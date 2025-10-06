@@ -2,6 +2,8 @@
 
 The kind of shit a morgue IT technician comes up with when there's nothing to do, but their computer is able to compile C and doesn't support OpenGL. Text-mode graphics inside the Windows console for all kinds of Pentium-III machines, contained within a single header file.
 
+Refer to [toy program sources](src/test.c) for quickstart.
+
 ## Installation
 
 Use `FetchContent` with CMake to include this library in your project:
