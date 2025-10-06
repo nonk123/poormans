@@ -7,9 +7,12 @@ int main(int argc, char* argv[]) {
 		poor_title("testing!!!");
 		poor_at(x, y)->chr = '@';
 		poor_at(x, y)->fg = POOR_RED;
+
 		if (poor_key_pressed(POOR_ESC) || (poor_key_down(POOR_LCTRL) && poor_key_pressed(POOR_C)))
 			poor_exit();
-		x++;
+
+		x += poor_key_down(POOR_KP_6) - poor_key_down(POOR_KP_4);
+		y += poor_key_down(POOR_KP_2) - poor_key_down(POOR_KP_8);
 	}
 	return EXIT_SUCCESS;
 }
