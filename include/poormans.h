@@ -58,21 +58,26 @@ enum {
 
 static HANDLE poor_input, poor_output;
 static HWND poor_window;
-static int poor_width = 0, poor_height = 0;
+
 static char poor_title[128] = "Poor Man's Graphics";
+
+static int poor_width = 0, poor_height = 0;
 static poor_cell poor_front[POOR_DISPLAY_AREA] = {0}, poor_back[POOR_DISPLAY_AREA] = {0};
 
+static int poor_request_exit = 0;
+static clock_t poor_frame_start;
+
 static void poor_hide_cursor() {
-	CONSOLE_CURSOR_INFO info;
+	CONSOLE_CURSOR_INFO info = {0};
 	info.dwSize = 100, info.bVisible = 0;
 	SetConsoleCursorInfo(poor_output, &info);
 }
 
 static void poor_fetch_window_size() {
-	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	CONSOLE_SCREEN_BUFFER_INFO csbi = {0};
 	GetConsoleScreenBufferInfo(poor_output, &csbi);
-	int new_width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-	int new_height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+	int new_width = csbi.srWindow.Right - csbi.srWindow.Left + 1,
+	    new_height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
 	if (new_width > POOR_MAX_WIDTH)
 		new_width = POOR_MAX_WIDTH;
 	if (new_height > POOR_MAX_HEIGHT)
@@ -91,11 +96,9 @@ static poor_cell* poor_atEx(poor_cell* ptr, int x, int y) {
 	return &ptr[y * poor_width + x];
 }
 
-static int poor_request_exit = 0;
-static clock_t poor_frame_start;
-
 #endif
 
+/// Request exit. Breaks `for`-loop boilerplate from the `poor_running` check.
 void poor_exit()
 #ifdef POOR_IMPLEMENTATION
 {
@@ -105,6 +108,7 @@ void poor_exit()
 	;
 #endif
 
+/// Get a pointer to the cell at specified coordinates. Points to a dummy cell if x/y are out of bounds.
 poor_cell* poor_at(int x, int y)
 #ifdef POOR_IMPLEMENTATION
 {
@@ -114,18 +118,19 @@ poor_cell* poor_at(int x, int y)
 	;
 #endif
 
+/// Initialize poormans. Should be the initializer inside `for` boilerplate.
 void poor_init()
 #ifdef POOR_IMPLEMENTATION
 {
-	poor_input = GetStdHandle(STD_INPUT_HANDLE);
-	poor_output = GetStdHandle(STD_OUTPUT_HANDLE);
-	poor_window = GetConsoleWindow();
+	poor_input = GetStdHandle(STD_INPUT_HANDLE), poor_output = GetStdHandle(STD_OUTPUT_HANDLE);
 	SetConsoleMode(poor_input, ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS);
+	poor_window = GetConsoleWindow();
 }
 #else
 	;
 #endif
 
+/// Return 0 if program requests exit. Should be the condition inside `for` boilerplate.
 int poor_running()
 #ifdef POOR_IMPLEMENTATION
 {
@@ -142,6 +147,7 @@ int poor_running()
 	;
 #endif
 
+/// Finalize poormans frame. Should be the increment inside `for` boilerplate.
 void poor_tick()
 #ifdef POOR_IMPLEMENTATION
 {
@@ -156,7 +162,7 @@ void poor_tick()
 				continue;
 
 			if (console_y != y || console_x != x - 1) {
-				COORD coord;
+				COORD coord = {0};
 				coord.X = x, coord.Y = y;
 				SetConsoleCursorPosition(poor_output, coord);
 			}
