@@ -8,6 +8,8 @@ Use `FetchContent` with CMake to include this library in your project:
 
 ```cmake
 include(FetchContent)
+set(FETCHCONTENT_QUIET FALSE) # shows `git clone` progress for the impatient
+
 FetchContent_Declare(poormans
     GIT_REPOSITORY https://github.com/nonk123/poormans.git
     GIT_TAG master) # or any other tag
