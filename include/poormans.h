@@ -123,6 +123,11 @@ int poor_running()
 {
 	poor_frame_start = clock();
 	poor_fetch_window_size();
+	for (size_t i = 0; i < POOR_DISPLAY_AREA; i++) {
+		poor_front[i].fg = POOR_GRAY;
+		poor_front[i].bg = POOR_BLACK;
+		poor_front[i].chr = ' ';
+	}
 	return !poor_request_exit;
 }
 #else
@@ -156,7 +161,6 @@ void poor_tick()
 			write(1, &front->chr, 1);
 			poor_memcpy(back, front, sizeof(poor_cell));
 		}
-	poor_memset(poor_front, 0, sizeof(poor_front));
 
 	const clock_t frame_end = clock();
 	const uint32_t deltaMs = ((((uint32_t)frame_end) - ((uint32_t)poor_frame_start)) * 1000) / CLOCKS_PER_SEC;
