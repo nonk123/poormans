@@ -72,9 +72,9 @@ static poor_cell poor_front[POOR_DISPLAY_AREA] = {0}, poor_back[POOR_DISPLAY_ARE
 static int poor_request_exit = 0;
 static clock_t poor_frame_start;
 
-static void poor_hide_cursor() {
+static void poor_set_cursor_hidden(int value) {
 	CONSOLE_CURSOR_INFO info = {0};
-	info.dwSize = 100, info.bVisible = 0;
+	info.dwSize = 100, info.bVisible = !value;
 	SetConsoleCursorInfo(poor_output, &info);
 }
 
@@ -89,7 +89,7 @@ static void poor_fetch_window_size() {
 		new_height = POOR_MAX_HEIGHT;
 	if (poor_width != new_width || poor_height != new_height) {
 		poor_memset(poor_back, 0, sizeof(poor_back));
-		poor_hide_cursor();
+		poor_set_cursor_hidden(1);
 	}
 	poor_width = new_width, poor_height = new_height;
 }
@@ -157,8 +157,10 @@ int poor_running()
 		poor_front[i].bg = POOR_BLACK;
 		poor_front[i].chr = ' ';
 	}
-	if (poor_request_exit)
+	if (poor_request_exit) {
 		SetConsoleTextAttribute(poor_output, POOR_GRAY);
+		poor_set_cursor_hidden(0);
+	}
 	return !poor_request_exit;
 }
 #else
