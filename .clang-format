@@ -1,0 +1,25 @@
+ColumnLimit: 120
+IndentWidth: 8
+ContinuationIndentWidth: 8
+UseTab: AlignWithSpaces
+AlignArrayOfStructures: Left
+IndentGotoLabels: true
+BreakBeforeBinaryOperators: All
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterControlStatement: MultiLine
+DerivePointerAlignment: false
+PointerAlignment: Left
+AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterReturnType: None
+AccessModifierOffset: -8
+IndentCaseLabels: true
+AlignAfterOpenBracket: DontAlign
+SortIncludes: CaseSensitive
+InsertNewlineAtEOF: true
+InsertBraces: false
