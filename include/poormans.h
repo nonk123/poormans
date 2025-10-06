@@ -141,6 +141,8 @@ int poor_running()
 		poor_front[i].bg = POOR_BLACK;
 		poor_front[i].chr = ' ';
 	}
+	if (poor_request_exit)
+		SetConsoleTextAttribute(poor_output, POOR_GRAY);
 	return !poor_request_exit;
 }
 #else
