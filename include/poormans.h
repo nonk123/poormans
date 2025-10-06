@@ -62,6 +62,12 @@ static int poor_width = 0, poor_height = 0;
 static char poor_title[128] = "Poor Man's Graphics";
 static poor_cell poor_front[POOR_DISPLAY_AREA] = {0}, poor_back[POOR_DISPLAY_AREA] = {0};
 
+static void poor_hide_cursor() {
+	CONSOLE_CURSOR_INFO info;
+	info.dwSize = 100, info.bVisible = 0;
+	SetConsoleCursorInfo(poor_output, &info);
+}
+
 static void poor_fetch_window_size() {
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	GetConsoleScreenBufferInfo(poor_output, &csbi);
@@ -71,8 +77,10 @@ static void poor_fetch_window_size() {
 		new_width = POOR_MAX_WIDTH;
 	if (new_height > POOR_MAX_HEIGHT)
 		new_height = POOR_MAX_HEIGHT;
-	if (poor_width != new_width || poor_height != new_height)
+	if (poor_width != new_width || poor_height != new_height) {
 		poor_memset(poor_back, 0, sizeof(poor_back));
+		poor_hide_cursor();
+	}
 	poor_width = new_width, poor_height = new_height;
 }
 
