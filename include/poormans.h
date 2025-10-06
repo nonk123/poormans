@@ -61,6 +61,10 @@ enum {
 #define poor_memcmp memcmp
 #endif
 
+typedef struct {
+	uint8_t buf[32];
+} poor_kbd_state;
+
 static HANDLE poor_input, poor_output;
 static HWND poor_window;
 
@@ -68,6 +72,8 @@ static char poor_title_buf[128] = POOR_DEFAULT_TITLE;
 
 static int poor_width = 0, poor_height = 0;
 static poor_cell poor_front[POOR_DISPLAY_AREA] = {0}, poor_back[POOR_DISPLAY_AREA] = {0};
+
+static poor_kbd_state poor_kbd_now = {0}, poor_kbd_then = {0};
 
 static int poor_request_exit = 0;
 static clock_t poor_frame_start;
@@ -123,12 +129,24 @@ poor_cell* poor_at(int x, int y)
 	;
 #endif
 
+/// Set console window's title. Pass `NULL` to reset it to poormans' default.
 void poor_title(const char* title)
 #ifdef POOR_IMPLEMENTATION
 {
 	if (title == NULL)
 		title = POOR_DEFAULT_TITLE;
 	snprintf(poor_title_buf, sizeof(poor_title_buf), "%s", title);
+}
+#else
+	;
+#endif
+
+/// Check if a key is down from the `POOR_*` keycode constants.
+int poor_keydown(uint8_t kbd)
+#ifdef POOR_IMPLEMENTATION
+{
+	const uint8_t mask = 1 << (kbd % 8);
+	return !!(poor_kbd_now.buf[kbd / 8] & mask);
 }
 #else
 	;
@@ -167,12 +185,34 @@ int poor_running()
 	;
 #endif
 
-/// Finalize poormans frame. Should be the increment inside `for` boilerplate.
-void poor_tick()
 #ifdef POOR_IMPLEMENTATION
-{
-	SetConsoleTitle(poor_title_buf);
 
+static void poor_handle_input() {
+	DWORD count = 0;
+	GetNumberOfConsoleInputEvents(poor_input, &count);
+	if (!count)
+		return;
+
+	INPUT_RECORD records[10];
+	ReadConsoleInput(poor_input, records, sizeof(records) / sizeof(*records), &count);
+	poor_memcpy(&poor_kbd_then, &poor_kbd_now, sizeof(poor_kbd_then));
+
+	for (DWORD i = 0; i < count; i++) {
+		if (records[i].EventType != KEY_EVENT)
+			continue;
+		KEY_EVENT_RECORD event = records[i].Event.KeyEvent;
+		WORD kbd = event.wVirtualScanCode;
+		if (kbd < 1 || kbd >= 256)
+			continue;
+		const uint8_t mask = 1 << (kbd % 8);
+		if (event.bKeyDown)
+			poor_kbd_now.buf[kbd / 8] |= mask;
+		else
+			poor_kbd_now.buf[kbd / 8] &= ~mask;
+	}
+}
+
+static void poor_blit() {
 	int console_x = -2, console_y = 0, console_fg = -1, console_bg = -1;
 	for (int y = 0; y < poor_height; y++)
 		for (int x = 0; x < poor_width; x++) {
@@ -195,6 +235,17 @@ void poor_tick()
 			write(1, &front->chr, 1);
 			poor_memcpy(back, front, sizeof(poor_cell));
 		}
+}
+
+#endif
+
+/// Finalize poormans frame. Should be the increment inside `for` boilerplate.
+void poor_tick()
+#ifdef POOR_IMPLEMENTATION
+{
+	SetConsoleTitle(poor_title_buf);
+	poor_handle_input();
+	poor_blit();
 
 	const clock_t frame_end = clock();
 	const uint32_t deltaMs = ((((uint32_t)frame_end) - ((uint32_t)poor_frame_start)) * 1000) / CLOCKS_PER_SEC;
@@ -204,3 +255,89 @@ void poor_tick()
 #else
 	;
 #endif
+
+enum {
+	POOR_ESC = 1,
+	POOR_1,
+	POOR_2,
+	POOR_3,
+	POOR_4,
+	POOR_5,
+	POOR_6,
+	POOR_7,
+	POOR_8,
+	POOR_9,
+	POOR_0,
+	POOR_HYPHEN,
+	POOR_EQUALS,
+	POOR_BACKSPACE,
+	POOR_TAB,
+	POOR_Q,
+	POOR_W,
+	POOR_E,
+	POOR_R,
+	POOR_T,
+	POOR_Y,
+	POOR_U,
+	POOR_I,
+	POOR_O,
+	POOR_P,
+	POOR_LEFT_BRACKET,
+	POOR_RIGHT_BRACKET,
+	POOR_ENTER,
+	POOR_LCTRL,
+	POOR_A,
+	POOR_S,
+	POOR_D,
+	POOR_F,
+	POOR_G,
+	POOR_H,
+	POOR_J,
+	POOR_K,
+	POOR_L,
+	POOR_SEMICOLON,
+	POOR_QUOTE,
+	POOR_GRAVE, // aka tilde
+	POOR_LSHIFT,
+	POOR_BACKSLASH,
+	POOR_Z,
+	POOR_X,
+	POOR_C,
+	POOR_V,
+	POOR_B,
+	POOR_N,
+	POOR_M,
+	POOR_COMMA,
+	POOR_FULL_STOP,
+	POOR_SLASH,
+	POOR_RSHIFT,
+	POOR_PRT_SCR,
+	POOR_LALT,
+	POOR_SPACEBAR,
+	POOR_CAPS_LOCK,
+	POOR_F1,
+	POOR_F2,
+	POOR_F3,
+	POOR_F4,
+	POOR_F5,
+	POOR_F6,
+	POOR_F7,
+	POOR_F8,
+	POOR_F9,
+	POOR_F10,
+	POOR_NUMLOCK,
+	POOR_SCROLL_LOCK,
+	POOR_KP_7,
+	POOR_KP_8,
+	POOR_KP_9,
+	POOR_KP_MINUS,
+	POOR_KP_4,
+	POOR_KP_5,
+	POOR_KP_6,
+	POOR_KP_PLUS,
+	POOR_KP_1,
+	POOR_KP_2,
+	POOR_KP_3,
+	POOR_KP_0,
+	POOR_KP_DOT,
+};

@@ -2,13 +2,14 @@
 #include "poormans.h"
 
 int main(int argc, char* argv[]) {
-	int start_x = 5, x = start_x, y = 5;
+	int x = 5, y = 5;
 	for (poor_init(); poor_running(); poor_tick()) {
 		poor_title("testing!!!");
 		poor_at(x, y)->chr = '@';
 		poor_at(x, y)->fg = POOR_RED;
-		if (++x > POOR_REFRESH_HZ + start_x)
+		if (poor_keydown(POOR_ESC) || (poor_keydown(POOR_LCTRL) && poor_keydown(POOR_C)))
 			poor_exit();
+		x++;
 	}
 	return EXIT_SUCCESS;
 }
