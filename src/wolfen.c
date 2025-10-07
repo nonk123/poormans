@@ -1,5 +1,5 @@
 #define POOR_IMPLEMENTATION
-#include "poormans.h"
+#include <poormans.h>
 
 #include <math.h>
 

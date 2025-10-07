@@ -1,8 +1,8 @@
 #define S_FIXED_IMPLEMENTATION
-#include "S_fixed.h"
+#include <S_fixed.h>
 
 #define POOR_IMPLEMENTATION
-#include "poormans.h"
+#include <poormans.h>
 
 extern void tick();
 

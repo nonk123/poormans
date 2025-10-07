@@ -1,6 +1,9 @@
 #include "terrain.h"
 
-BlockTable Blocks[BLOCK_MAX] = {
-	[BLOCK_AIR] = {.display = NULL},
-	[BLOCK_DIRT] = {.display = display_dirt},
+extern const BlockTable TB_DIRT;
+const BlockTable TB_AIR = {0};
+
+const BlockTable* Blocks[BLOCK_MAX] = {
+	[BLOCK_AIR] = &TB_AIR,
+	[BLOCK_DIRT] = &TB_DIRT,
 };

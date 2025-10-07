@@ -1,5 +1,5 @@
 #define POOR_IMPLEMENTATION
-#include "poormans.h"
+#include <poormans.h>
 
 int main(int argc, char* argv[]) {
 	int x = 5, y = 10;
