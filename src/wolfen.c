@@ -43,10 +43,6 @@ static char* map_at(int x, int y) {
 	return &map[y][x];
 }
 
-static char* map_atR(real x, real y) {
-	return map_at((int)x, (int)y);
-}
-
 static void cast_ray(int colx) {
 	realc hw = 0.5f * poor_width(), offset = ((real)(colx - hw)) / hw;
 	realc angle = player.angle + fov * offset, step = 0.02f;
@@ -56,7 +52,8 @@ static void cast_ray(int colx) {
 	real dist = znear;
 	for (; dist < zfar; dist += step) {
 		realc x = player.x + dirx * dist, y = player.y + diry * dist;
-		const char next = *map_atR(x, y);
+		int ix = x + (dirx < 0.f), iy = y + (diry < 0.f);
+		const char next = *map_at(ix, iy);
 		if (next != ' ') {
 			tile = next;
 			break;
@@ -65,7 +62,7 @@ static void cast_ray(int colx) {
 	if (tile == ' ')
 		return;
 
-	const int colh = (1.f - (dist - znear) / zfar) * (real)poor_height();
+	const int colh = (znear + zfar) / dist * (real)poor_height();
 	for (int i = 0; i < colh; i++) {
 		const int coly = (poor_height() - colh) / 2 + i;
 		*poor_at(colx, coly) = tile_display[tile];
