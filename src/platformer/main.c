@@ -4,11 +4,14 @@
 #define POOR_IMPLEMENTATION
 #include "poormans.h"
 
+extern void tick();
+
 int main(int argc, char* argv[]) {
 	for (poor_init(); poor_running(); poor_tick()) {
 		poor_title("platforming!!!");
 		if (poor_key_pressed(POOR_ESC) || (poor_key_down(POOR_LCTRL) && poor_key_pressed(POOR_C)))
 			poor_exit();
+		tick();
 	}
 	return EXIT_SUCCESS;
 }
