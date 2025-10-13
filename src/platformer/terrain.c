@@ -36,7 +36,7 @@ static Chunk* generate_chunk(int start_x) {
 	chunk->start_x = start_x;
 
 	for (int x = start_x; x < start_x + CHUNK_WIDTH; x++) {
-		const int height = 1.f + sample(x) * (WORLD_HEIGHT - SEA_LEVEL) * 0.7f;
+		const int height = (int)(1.f + sample(x) * (WORLD_HEIGHT - SEA_LEVEL) * 0.7f);
 		for (int y = 0; y < SEA_LEVEL + height; y++)
 			BLOCK(y)->id = BLOCK_DIRT;
 	}
