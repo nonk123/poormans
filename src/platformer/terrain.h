@@ -34,7 +34,7 @@ typedef struct {
 
 typedef struct Chunk {
 	Column cols[CHUNK_WIDTH];
-	int start_x;
+	int x_offset;
 	struct Chunk* next;
 } Chunk;
 

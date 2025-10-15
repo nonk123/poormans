@@ -10,4 +10,7 @@ Checks: |
   -bugprone-suspicious-memory-comparison,
   performance-*,
   -performance-enum-size,
-  portability-*
+  portability-*,
+  misc-*,
+  -misc-definitions-in-headers,
+  -misc-unused-parameters

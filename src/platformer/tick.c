@@ -5,10 +5,12 @@
 void tick() {
 	static int center_x = 0;
 	center_x += poor_key_down(POOR_KP_6) - poor_key_down(POOR_KP_4);
+
 	const int start_x = center_x - poor_width() / 2;
 	for (int dx = 0; dx < poor_width(); dx++)
 		load_block(start_x + dx);
-	const int center_y = (WORLD_HEIGHT * 10) / 6;
+
+	const int center_y = SEA_LEVEL;
 	const int start_y = center_y - poor_height() / 2;
 	for (int dy = 0; dy < poor_height(); dy++) {
 		for (int dx = 0; dx < poor_width(); dx++) {
