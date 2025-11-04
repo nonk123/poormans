@@ -8,6 +8,7 @@
 
 // TODO: support anything but Windows.
 #include <windows.h>
+#include <signal.h>
 #include <io.h>
 
 #define POOR_MAX_WIDTH (400)
@@ -269,6 +270,12 @@ int poor_key_pressed(uint8_t scancode)
 	;
 #endif
 
+#ifdef POOR_IMPLEMENTATION
+static void poor_handle_break(int signal) {
+	poor_exit();
+}
+#endif
+
 /// Initialize poormans. Should be the initializer inside `for` boilerplate.
 void poor_init()
 #ifdef POOR_IMPLEMENTATION
@@ -276,9 +283,22 @@ void poor_init()
 	poor_input = GetStdHandle(STD_INPUT_HANDLE), poor_output = GetStdHandle(STD_OUTPUT_HANDLE);
 	SetConsoleMode(poor_input, ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS);
 	poor_window = GetConsoleWindow();
+	signal(SIGBREAK, poor_handle_break);
 }
 #else
 	;
+#endif
+
+#ifdef POOR_IMPLEMENTATION
+static void poor_cleanup() {
+	// Unset `SIGBREAK` handler only if it's our own. It wouldn't be nice to overwrite someone else's handler.
+	void (*current_handler)(int) = signal(SIGBREAK, SIG_DFL);
+	if (current_handler != poor_handle_break)
+		signal(SIGBREAK, current_handler);
+
+	SetConsoleTextAttribute(poor_output, POOR_GRAY);
+	poor_set_cursor_hidden(0);
+}
 #endif
 
 /// Return 0 if program requests exit. Should be the condition inside `for` boilerplate.
@@ -292,10 +312,8 @@ int poor_running()
 		poor_front[i].bg = POOR_BLACK;
 		poor_front[i].chr = ' ';
 	}
-	if (poor_request_exit) {
-		SetConsoleTextAttribute(poor_output, POOR_GRAY);
-		poor_set_cursor_hidden(0);
-	}
+	if (poor_request_exit)
+		poor_cleanup();
 	return !poor_request_exit;
 }
 #else
