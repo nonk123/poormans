@@ -17,8 +17,8 @@ function(add_toy NAME)
     target_link_libraries(poormans_${NAME} PRIVATE poormans)
 endfunction()
 
-option(BUILD_TOYS "Build poormans toy programs?" ON)
-if(BUILD_TOYS)
+option(POOR_BUILD_TOYS "Build poormans toy programs?")
+if(POOR_BUILD_TOYS)
     set(BUILD_SHARED_LIBS OFF)
 
     include(FetchContent)
