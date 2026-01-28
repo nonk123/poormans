@@ -1,26 +1,29 @@
-cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.28 FATAL_ERROR)
 
-project(poormans LANGUAGES C)
+project(poormans VERSION 0.1.0
+    LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
+set(BUILD_SHARED_LIBS OFF)
 
 add_library(poormans INTERFACE)
-target_include_directories(poormans INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(poormans
+    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 if(WIN32)
-    target_link_options(poormans INTERFACE $<IF:$<BOOL:${MSVC}>,/SUBSYSTEM:CONSOLE,-mconsole>)
+    set(CONSOLE_OPT $<IF:$<BOOL:${MSVC}>,/SUBSYSTEM:CONSOLE,-mconsole>)
+    target_link_options(poormans INTERFACE ${CONSOLE_OPT})
     target_link_libraries(poormans INTERFACE user32.lib)
 endif()
 
 function(add_toy NAME)
-    add_executable(poormans_${NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/${NAME}.c)
+    add_executable(poormans_${NAME}
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/${NAME}.c)
     target_link_libraries(poormans_${NAME} PRIVATE poormans)
 endfunction()
 
 option(POOR_BUILD_TOYS "Build poormans toy programs?")
 if(POOR_BUILD_TOYS)
-    set(BUILD_SHARED_LIBS OFF)
-
     include(FetchContent)
     set(FETCHCONTENT_QUIET FALSE)
 
