@@ -37,7 +37,7 @@ int poor_width();
 /// Return console buffer height in character increments.
 int poor_height();
 
-enum {
+typedef enum {
 	POOR_BLACK,
 	POOR_BLUE,
 	POOR_GREEN,
@@ -54,9 +54,9 @@ enum {
 	POOR_BRIGHT_PURPLE,
 	POOR_BRIGHT_YELLOW,
 	POOR_BRIGHT_WHITE,
-};
+} poor_color;
 
-enum {
+typedef enum {
 	POOR_KEY_MIN,
 	POOR_ESC,
 	POOR_DIGIT_1,
@@ -142,7 +142,7 @@ enum {
 	POOR_KP_0,
 	POOR_KP_DOT,
 	POOR_KEY_MAX,
-};
+} poor_key;
 
 #ifdef POOR_IMPLEMENTATION
 
@@ -245,13 +245,13 @@ void poor_title(const char* title)
 #endif
 
 #ifdef POOR_IMPLEMENTATION
-static bool poor_key_in(const poor_kbd_state kbd, uint8_t scancode) {
+static bool poor_key_in(const poor_kbd_state kbd, poor_key scancode) {
 	return !!(kbd[scancode / 8] & (1 << (scancode % 8)));
 }
 #endif
 
 /// Check if a key is held down. Pass one of the `POOR_*` keycode constants.
-bool poor_key_down(uint8_t scancode)
+bool poor_key_down(poor_key scancode)
 #ifdef POOR_IMPLEMENTATION
 {
 	return poor_key_in(poor_kbd_now, scancode);
@@ -261,7 +261,7 @@ bool poor_key_down(uint8_t scancode)
 #endif
 
 /// Check if a key was just pressed. Pass one of the `POOR_*` keycode constants.
-bool poor_key_pressed(uint8_t scancode)
+bool poor_key_pressed(poor_key scancode)
 #ifdef POOR_IMPLEMENTATION
 {
 	return poor_key_in(poor_kbd_just, scancode);
