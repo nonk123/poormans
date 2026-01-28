@@ -236,7 +236,7 @@ poor_cell* poor_at(int x, int y)
 void poor_title(const char* title)
 #ifdef POOR_IMPLEMENTATION
 {
-	if (title == NULL)
+	if (!title)
 		title = POOR_DEFAULT_TITLE;
 	snprintf(poor_title_buf, sizeof(poor_title_buf), "%s", title);
 }
