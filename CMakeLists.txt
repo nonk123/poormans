@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 3.28 FATAL_ERROR)
 project(poormans VERSION 0.1.0
     LANGUAGES C)
 
-set(CMAKE_C_STANDARD 11)
 set(CMAKE_COMPILE_WARNING_AS_ERROR ON)
 set(BUILD_SHARED_LIBS OFF)
 
@@ -17,9 +16,10 @@ if(WIN32)
 endif()
 
 function(add_toy NAME)
-    add_executable(poormans_${NAME}
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/${NAME}.c)
-    target_link_libraries(poormans_${NAME} PRIVATE poormans)
+    set(TARGET poormans_${NAME})
+    add_executable(${TARGET} ${CMAKE_CURRENT_SOURCE_DIR}/src/${NAME}.c)
+    target_link_libraries(${TARGET} PRIVATE poormans)
+    set_target_properties(${TARGET} PROPERTIES C_STANDARD 11)
 endfunction()
 
 option(POOR_BUILD_TOYS "Build poormans toy programs?")
