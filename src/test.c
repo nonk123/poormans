@@ -5,7 +5,7 @@ int main(int argc, char* argv[]) {
 	(void)argc, (void)argv;
 
 	int x = 5, y = 10;
-	for (poor_init(); poor_running(); poor_tick()) {
+	WHILE_POOR {
 		poor_title("testing!!!");
 		poor_at(x, y / 2)->chr = '@';
 		poor_at(x, y / 2)->fg = POOR_RED;
@@ -16,5 +16,6 @@ int main(int argc, char* argv[]) {
 		x += poor_key_down(POOR_KP_6) - poor_key_down(POOR_KP_4);
 		y += poor_key_down(POOR_KP_2) - poor_key_down(POOR_KP_8);
 	}
+
 	return EXIT_SUCCESS;
 }

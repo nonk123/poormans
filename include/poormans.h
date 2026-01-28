@@ -27,6 +27,8 @@
 
 #define POOR_REFRESH_RATE (1000 / POOR_REFRESH_HZ)
 
+#define WHILE_POOR for (poor_init(); poor_running(); poor_tick())
+
 typedef struct {
 	uint8_t fg : 4, bg : 4, chr;
 } poor_cell;

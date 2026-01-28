@@ -23,3 +23,4 @@ AlignAfterOpenBracket: DontAlign
 SortIncludes: Never
 InsertNewlineAtEOF: true
 InsertBraces: false
+ForEachMacros: [WHILE_POOR]
