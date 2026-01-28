@@ -2,6 +2,7 @@
 
 #include <memory.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -156,9 +157,8 @@ enum {
 #define poor_memcmp memcmp
 #endif
 
-typedef struct {
-	uint8_t buf[32];
-} poor_kbd_state;
+typedef uint8_t poor_kbd_state[32];
+typedef poor_cell poor_display[POOR_DISPLAY_AREA];
 
 static HANDLE poor_input, poor_output;
 static HWND poor_window;
@@ -166,14 +166,13 @@ static HWND poor_window;
 static char poor_title_buf[128] = POOR_DEFAULT_TITLE;
 
 static int poor_window_width = 0, poor_window_height = 0;
-static poor_cell poor_front[POOR_DISPLAY_AREA] = {0}, poor_back[POOR_DISPLAY_AREA] = {0};
-
+static poor_display poor_front = {0}, poor_back = {0};
 static poor_kbd_state poor_kbd_now = {0}, poor_kbd_just = {0};
 
-static int poor_request_exit = 0;
+static bool poor_request_exit = 0;
 static clock_t poor_frame_start;
 
-static void poor_set_cursor_hidden(int value) {
+static void poor_set_cursor_hidden(bool value) {
 	CONSOLE_CURSOR_INFO info = {0};
 	info.dwSize = 100, info.bVisible = !value;
 	SetConsoleCursorInfo(poor_output, &info);
@@ -190,12 +189,12 @@ static void poor_fetch_window_size() {
 		new_height = POOR_MAX_HEIGHT;
 	if (poor_window_width != new_width || poor_window_height != new_height) {
 		poor_memset(poor_back, 0, sizeof(poor_back));
-		poor_set_cursor_hidden(1);
+		poor_set_cursor_hidden(true);
 	}
 	poor_window_width = new_width, poor_window_height = new_height;
 }
 
-static poor_cell* poor_atEx(poor_cell* ptr, int x, int y) {
+static poor_cell* poor_at_pro(poor_cell* ptr, int x, int y) {
 	static poor_cell deflt = {0};
 	if (x < 0 || y < 0 || x >= poor_width() || y >= poor_height())
 		return &deflt;
@@ -216,7 +215,7 @@ int poor_height() {
 void poor_exit()
 #ifdef POOR_IMPLEMENTATION
 {
-	poor_request_exit = 1;
+	poor_request_exit = true;
 }
 #else
 	;
@@ -226,7 +225,7 @@ void poor_exit()
 poor_cell* poor_at(int x, int y)
 #ifdef POOR_IMPLEMENTATION
 {
-	return poor_atEx(poor_front, x, y);
+	return poor_at_pro(poor_front, x, y);
 }
 #else
 	;
@@ -245,26 +244,26 @@ void poor_title(const char* title)
 #endif
 
 #ifdef POOR_IMPLEMENTATION
-static int poor_key_in(const poor_kbd_state* kbd, uint8_t scancode) {
-	return !!(kbd->buf[scancode / 8] & (1 << (scancode % 8)));
+static bool poor_key_in(const poor_kbd_state kbd, uint8_t scancode) {
+	return !!(kbd[scancode / 8] & (1 << (scancode % 8)));
 }
 #endif
 
 /// Check if a key is held down. Pass one of the `POOR_*` keycode constants.
-int poor_key_down(uint8_t scancode)
+bool poor_key_down(uint8_t scancode)
 #ifdef POOR_IMPLEMENTATION
 {
-	return poor_key_in(&poor_kbd_now, scancode);
+	return poor_key_in(poor_kbd_now, scancode);
 }
 #else
 	;
 #endif
 
 /// Check if a key was just pressed. Pass one of the `POOR_*` keycode constants.
-int poor_key_pressed(uint8_t scancode)
+bool poor_key_pressed(uint8_t scancode)
 #ifdef POOR_IMPLEMENTATION
 {
-	return poor_key_in(&poor_kbd_just, scancode);
+	return poor_key_in(poor_kbd_just, scancode);
 }
 #else
 	;
@@ -297,12 +296,12 @@ static void poor_cleanup() {
 		signal(SIGBREAK, current_handler);
 
 	SetConsoleTextAttribute(poor_output, POOR_GRAY);
-	poor_set_cursor_hidden(0);
+	poor_set_cursor_hidden(false);
 }
 #endif
 
-/// Return 0 if program requests exit. Should be the condition inside `for` boilerplate.
-int poor_running()
+/// Return false if program requests exit. Should be the condition inside `for` boilerplate.
+bool poor_running()
 #ifdef POOR_IMPLEMENTATION
 {
 	poor_frame_start = clock();
@@ -341,10 +340,10 @@ static void poor_handle_input() {
 			continue;
 		const uint8_t mask = 1 << (kbd % 8);
 		if (event.bKeyDown) {
-			poor_kbd_now.buf[kbd / 8] |= mask;
-			poor_kbd_just.buf[kbd / 8] |= mask;
+			poor_kbd_now[kbd / 8] |= mask;
+			poor_kbd_just[kbd / 8] |= mask;
 		} else
-			poor_kbd_now.buf[kbd / 8] &= ~mask;
+			poor_kbd_now[kbd / 8] &= ~mask;
 	}
 }
 
@@ -352,8 +351,8 @@ static void poor_blit() {
 	int console_x = -2, console_y = 0, console_fg = -1, console_bg = -1;
 	for (int y = 0; y < poor_height(); y++)
 		for (int x = 0; x < poor_width(); x++) {
-			const poor_cell* front = poor_atEx(poor_front, x, y);
-			poor_cell* back = poor_atEx(poor_back, x, y);
+			const poor_cell* front = poor_at_pro(poor_front, x, y);
+			poor_cell* back = poor_at_pro(poor_back, x, y);
 			if (!poor_memcmp(front, back, sizeof(poor_cell)))
 				continue;
 
