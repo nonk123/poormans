@@ -24,17 +24,14 @@ if(POOR_BUILD_TOYS)
     include(FetchContent)
     set(FETCHCONTENT_QUIET FALSE)
 
+    set(OSN_FLOAT_TYPE float)
     FetchContent_Declare(S_fixed
         GIT_REPOSITORY https://github.com/Schwungus/S_fixed.git
         GIT_TAG master)
     FetchContent_Declare(noise
-        GIT_REPOSITORY https://github.com/smcameron/open-simplex-noise-in-c.git
-        GIT_TAG 53cf5bfd4a5289f263568bedd778e2d86eb8a1ef)
+        GIT_REPOSITORY https://github.com/nonk123/open-simplex-noise-in-c.git
+        GIT_TAG c3862273b9cd7a44d1b2b50c9fc23a9a8cc13992)
     FetchContent_MakeAvailable(S_fixed noise)
-
-    add_library(noise ${noise_SOURCE_DIR}/open-simplex-noise.c)
-    target_include_directories(noise PUBLIC ${noise_SOURCE_DIR})
-    target_compile_definitions(noise PUBLIC OSNFLOAT=float)
 
     add_toy(test)
 endif()
