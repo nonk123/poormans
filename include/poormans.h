@@ -171,7 +171,7 @@ static poor_display poor_front = {0}, poor_back = {0};
 static poor_kbd_state poor_kbd_now = {0}, poor_kbd_just = {0};
 
 static bool poor_request_exit = 0;
-static clock_t poor_frame_start;
+static clock_t poor_frame_start = 0;
 
 static void poor_set_cursor_hidden(bool value) {
 	CONSOLE_CURSOR_INFO info = {0};
@@ -272,7 +272,7 @@ bool poor_key_pressed(poor_key scancode)
 
 #ifdef POOR_IMPLEMENTATION
 static void poor_handle_break(int signal) {
-	poor_exit();
+	(void)signal, poor_exit();
 }
 #endif
 
