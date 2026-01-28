@@ -1,11 +1,12 @@
 #pragma once
 
-#include <memory.h>
+#ifndef POOR_NOSTD
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#endif
 
 // TODO: support anything but Windows.
 #include <windows.h>
