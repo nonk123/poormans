@@ -426,14 +426,17 @@ static void poor_blit() {
 			poor_cell* back = poor_at_pro(poor_back, x, y);
 			if (front->fg == back->fg && front->bg == back->bg && front->chr == back->chr)
 				continue;
-			poor_write("\x1b[%d;%dH", y + 1, x + 1);
 			poor_write("\x1b[%d;%dm", 30 + front->fg + 52 * (front->fg >= 8),
 				40 + front->bg + 52 * (front->bg >= 8));
+			poor_write("\x1b[%d;%dH", y + 1, x + 1);
 			poor_write("%c", front->chr);
 		}
 	poor_memcpy(poor_back, poor_front, sizeof(poor_display));
 	FlushFileBuffers(poor_output);
 }
+
+static double poor_elapsed = 0.0;
+static uint64_t poor_ticks = 0;
 
 static void poor_end_frame() {
 	const double refresh_rate = 1.0 / (double)poor_vsync_refresh_rate();
@@ -442,6 +445,9 @@ static void poor_end_frame() {
 		Sleep((DWORD)(1000 * (refresh_rate - poor_raw_dt)));
 		poor_raw_dt = refresh_rate;
 	}
+
+	poor_elapsed += poor_raw_dt;
+	poor_ticks++;
 }
 #endif
 
@@ -450,7 +456,7 @@ void poor_tick()
 #ifdef POOR_IMPLEMENTATION
 {
 #if 1
-	poor_printf(0, 0, "% 3dHz", poor_vsync_refresh_rate());
+	poor_printf(0, 0, "% 3dHz % 3.2fFPS", poor_vsync_refresh_rate(), ((double)poor_ticks) / poor_elapsed);
 #endif
 	SetConsoleTitle(poor_title_buf);
 	poor_blit();
