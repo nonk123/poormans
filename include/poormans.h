@@ -21,11 +21,9 @@
 #define POOR_DEFAULT_TITLE "Poor Man's Graphics"
 #endif
 
-#ifndef POOR_REFRESH_HZ
-#define POOR_REFRESH_HZ (60)
+#ifndef POOR_DEFAULT_REFRESH_HZ
+#define POOR_DEFAULT_REFRESH_HZ (60)
 #endif
-
-#define POOR_REFRESH_RATE (1000 / POOR_REFRESH_HZ)
 
 #define WHILE_POOR for (poor_init(); poor_running(); poor_tick())
 
@@ -174,6 +172,7 @@ static poor_kbd_state poor_kbd_now = {0}, poor_kbd_just = {0};
 
 static bool poor_request_exit = 0;
 static clock_t poor_frame_start = 0;
+static double poor_raw_dt = 1.f / POOR_DEFAULT_REFRESH_HZ;
 
 static void poor_set_cursor_hidden(bool value) {
 	CONSOLE_CURSOR_INFO info = {0};
@@ -376,11 +375,43 @@ static void poor_blit() {
 		}
 }
 
+static int poor_vsync_refresh_rate() {
+	HWND hwndConsole = GetConsoleWindow();
+	if (!hwndConsole)
+		goto fail;
+
+	HMONITOR hMonitor = MonitorFromWindow(hwndConsole, MONITOR_DEFAULTTONEAREST);
+	if (hMonitor == NULL)
+		goto fail;
+
+	MONITORINFOEX mi;
+	mi.cbSize = sizeof(mi);
+	if (!GetMonitorInfo(hMonitor, (MONITORINFO*)&mi))
+		goto fail;
+
+	DEVMODE dm = {0};
+	dm.dmSize = sizeof(dm);
+	if (!EnumDisplaySettings(mi.szDevice, ENUM_CURRENT_SETTINGS, &dm))
+		goto fail;
+
+	if (dm.dmDisplayFrequency <= 1)
+		goto fail;
+
+	return (int)dm.dmDisplayFrequency;
+
+fail:
+	return POOR_DEFAULT_REFRESH_HZ;
+}
+
 static void poor_end_frame() {
+	const double refresh_rate = 1.0 / (double)poor_vsync_refresh_rate();
 	const clock_t frame_end = clock();
-	const uint64_t delta_ms = ((((uint64_t)frame_end) - ((uint64_t)poor_frame_start)) * 1000) / CLOCKS_PER_SEC;
-	if (delta_ms < POOR_REFRESH_RATE)
-		Sleep(POOR_REFRESH_RATE - delta_ms);
+
+	poor_raw_dt = (double)(((uint64_t)frame_end) - ((uint64_t)poor_frame_start)) / (double)CLOCKS_PER_SEC;
+	if (poor_raw_dt < refresh_rate) {
+		Sleep((DWORD)(1000 * (refresh_rate - poor_raw_dt)));
+		poor_raw_dt = refresh_rate;
+	}
 }
 
 #endif
@@ -393,6 +424,26 @@ void poor_tick()
 	poor_handle_input();
 	poor_blit();
 	poor_end_frame();
+}
+#else
+	;
+#endif
+
+/// Get the time it took to render the previous frame, in seconds.
+double poor_dt()
+#ifdef POOR_IMPLEMENTATION
+{
+	return poor_raw_dt;
+}
+#else
+	;
+#endif
+
+/// Same as `poor_dt`, but cast to float for convenience.
+float poor_dtf()
+#ifdef POOR_IMPLEMENTATION
+{
+	return (float)poor_raw_dt;
 }
 #else
 	;
