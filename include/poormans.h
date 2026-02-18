@@ -255,7 +255,7 @@ void poor_printf(int x, int y, const char* format, ...)
 
 	for (char* ptr = buf; *ptr; ptr++, x++) {
 		poor_at(x, y)->bg = POOR_BLACK;
-		poor_at(x, y)->fg = POOR_GRAY;
+		poor_at(x, y)->fg = POOR_WHITE;
 		poor_at(x, y)->chr = *ptr;
 	}
 }
@@ -427,8 +427,8 @@ static void poor_blit() {
 			if (front->fg == back->fg && front->bg == back->bg && front->chr == back->chr)
 				continue;
 			poor_write("\x1b[%d;%dH", y + 1, x + 1);
-			poor_write("\x1b[%d;%dm", 30 + front->fg + 43 * (front->fg > 7),
-				40 + front->bg + 43 * (front->bg > 7));
+			poor_write("\x1b[%d;%dm", 30 + front->fg + 52 * (front->fg >= 8),
+				40 + front->bg + 52 * (front->bg >= 8));
 			poor_write("%c", front->chr);
 		}
 	poor_memcpy(poor_back, poor_front, sizeof(poor_display));

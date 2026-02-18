@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
 		y += poor_key_down(POOR_KP_2) - poor_key_down(POOR_KP_8);
 
 		poor_at(x, y / 2)->chr = '@';
-		poor_at(x, y / 2)->fg = POOR_RED;
+		poor_at(x, y / 2)->fg = POOR_BRIGHT_RED;
 		poor_title("testing!!!");
 
 		if (poor_key_pressed(POOR_ESC) || (poor_key_down(POOR_LCTRL) && poor_key_pressed(POOR_C)))
