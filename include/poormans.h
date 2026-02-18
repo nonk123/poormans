@@ -345,8 +345,9 @@ static void poor_handle_input() {
 		if (event.bKeyDown) {
 			poor_kbd_now[kbd / 8] |= mask;
 			poor_kbd_just[kbd / 8] |= mask;
-		} else
+		} else {
 			poor_kbd_now[kbd / 8] &= ~mask;
+		}
 	}
 }
 
