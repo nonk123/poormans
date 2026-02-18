@@ -426,7 +426,7 @@ static void poor_blit() {
 			poor_cell* back = poor_at_pro(poor_back, x, y);
 			if (front->fg == back->fg && front->bg == back->bg && front->chr == back->chr)
 				continue;
-			poor_write("\x1b[%d;%dm", 30 + front->fg + 52 * (front->fg >= 8),
+			poor_write("\x1b[0;%d;%dm", 30 + front->fg + 52 * (front->fg >= 8),
 				40 + front->bg + 52 * (front->bg >= 8));
 			poor_write("\x1b[%d;%dH", y + 1, x + 1);
 			poor_write("%c", front->chr);
