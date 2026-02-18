@@ -39,20 +39,21 @@ int poor_height();
 
 typedef enum {
 	POOR_BLACK,
-	POOR_BLUE,
-	POOR_GREEN,
-	POOR_AQUA,
 	POOR_RED,
-	POOR_PURPLE,
+	POOR_GREEN,
 	POOR_YELLOW,
+	POOR_BLUE,
+	POOR_MAGENTA,
+	POOR_CYAN,
 	POOR_WHITE,
-	POOR_GRAY,
-	POOR_BRIGHT_BLUE,
-	POOR_BRIGHT_GREEN,
-	POOR_BRIGHT_AQUA,
+	POOR_BRIGHT_BLACK,
+	POOR_GRAY = POOR_BRIGHT_BLACK,
 	POOR_BRIGHT_RED,
-	POOR_BRIGHT_PURPLE,
+	POOR_BRIGHT_GREEN,
 	POOR_BRIGHT_YELLOW,
+	POOR_BRIGHT_BLUE,
+	POOR_BRIGHT_MAGENTA,
+	POOR_BRIGHT_CYAN,
 	POOR_BRIGHT_WHITE,
 } poor_color;
 
@@ -157,8 +158,7 @@ typedef enum {
 typedef uint8_t poor_kbd_state[32];
 typedef poor_cell poor_display[POOR_DISPLAY_AREA];
 
-static HANDLE poor_input = INVALID_HANDLE_VALUE, poor_output = INVALID_HANDLE_VALUE,
-	      poor_original_output = INVALID_HANDLE_VALUE;
+static HANDLE poor_input = INVALID_HANDLE_VALUE, poor_output = INVALID_HANDLE_VALUE;
 static HWND poor_window = INVALID_HANDLE_VALUE;
 
 static char poor_title_buf[128] = POOR_DEFAULT_TITLE;
@@ -170,6 +170,17 @@ static poor_kbd_state poor_kbd_now = {0}, poor_kbd_just = {0};
 static bool poor_request_exit = 0;
 static clock_t poor_frame_start = 0;
 static double poor_raw_dt = 1.f / POOR_DEFAULT_REFRESH_HZ;
+
+static void poor_write(const char* format, ...) {
+	static char buf[32] = {0};
+
+	va_list args = {0};
+	va_start(args, format);
+	vsnprintf(buf, sizeof(buf), format, args);
+	va_end(args);
+
+	WriteFile(poor_output, buf, strnlen(buf, sizeof(buf)), NULL, NULL);
+}
 
 static void poor_set_cursor_hidden(bool value) {
 	CONSOLE_CURSOR_INFO info = {0};
@@ -300,10 +311,17 @@ static void poor_handle_break(int signal) {
 void poor_init()
 #ifdef POOR_IMPLEMENTATION
 {
-	poor_original_output = GetStdHandle(STD_OUTPUT_HANDLE), poor_input = GetStdHandle(STD_INPUT_HANDLE);
-	poor_output = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
-	SetConsoleActiveScreenBuffer(poor_output);
-	SetConsoleMode(poor_input, (ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~ENABLE_QUICK_EDIT_MODE);
+	poor_output = GetStdHandle(STD_OUTPUT_HANDLE), poor_input = GetStdHandle(STD_INPUT_HANDLE);
+
+	DWORD cur_mode = 0;
+	GetConsoleMode(poor_output, &cur_mode);
+	SetConsoleMode(poor_output, cur_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN);
+
+	GetConsoleMode(poor_input, &cur_mode);
+	SetConsoleMode(poor_input, (cur_mode | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~ENABLE_QUICK_EDIT_MODE);
+
+	poor_write("\x1b[?1049h");
+
 	poor_window = GetConsoleWindow();
 	signal(SIGBREAK, poor_handle_break);
 	poor_memset(poor_back, 0, sizeof(poor_back));
@@ -318,8 +336,7 @@ static void poor_cleanup() {
 	void (*current_handler)(int) = signal(SIGBREAK, SIG_DFL);
 	if (current_handler != poor_handle_break)
 		signal(SIGBREAK, current_handler);
-	CloseHandle(poor_output);
-	SetConsoleActiveScreenBuffer(poor_original_output);
+	poor_write("\x1B[?1049l");
 }
 
 static void poor_handle_input() {
@@ -403,27 +420,19 @@ bool poor_running()
 
 #ifdef POOR_IMPLEMENTATION
 static void poor_blit() {
-	int actual_x = -2, actual_y = 0, actual_fg = -1, actual_bg = -1;
 	for (int y = 0; y < poor_height(); y++)
 		for (int x = 0; x < poor_width(); x++) {
 			const poor_cell* front = poor_at_pro(poor_front, x, y);
 			poor_cell* back = poor_at_pro(poor_back, x, y);
 			if (front->fg == back->fg && front->bg == back->bg && front->chr == back->chr)
 				continue;
-
-			if (y != actual_y || actual_x != x - 1) {
-				COORD coord = {.X = (SHORT)x, .Y = (SHORT)y};
-				SetConsoleCursorPosition(poor_output, coord);
-			}
-			actual_x = x, actual_y = y;
-
-			if ((int)front->fg != actual_fg || (int)front->bg != actual_bg)
-				SetConsoleTextAttribute(poor_output, (front->bg << 4) | front->fg);
-			actual_fg = front->fg, actual_bg = front->bg;
-
-			WriteConsoleA(poor_output, &front->chr, 1, NULL, NULL);
+			poor_write("\x1b[%d;%dH", y + 1, x + 1);
+			poor_write("\x1b[%d;%dm", 30 + front->fg + 43 * (front->fg > 7),
+				40 + front->bg + 43 * (front->bg > 7));
+			poor_write("%c", front->chr);
 		}
 	poor_memcpy(poor_back, poor_front, sizeof(poor_display));
+	FlushFileBuffers(poor_output);
 }
 
 static void poor_end_frame() {
