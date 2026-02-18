@@ -196,10 +196,8 @@ static void poor_fetch_window_size() {
 		new_width = POOR_MAX_WIDTH;
 	if (new_height > POOR_MAX_HEIGHT)
 		new_height = POOR_MAX_HEIGHT;
-	if (poor_window_width != new_width || poor_window_height != new_height) {
+	if (poor_window_width != new_width || poor_window_height != new_height)
 		poor_memset(poor_back, 0, sizeof(poor_back));
-		poor_set_cursor_hidden(true);
-	}
 	poor_window_width = new_width, poor_window_height = new_height;
 }
 
@@ -336,6 +334,7 @@ static void poor_cleanup() {
 	void (*current_handler)(int) = signal(SIGBREAK, SIG_DFL);
 	if (current_handler != poor_handle_break)
 		signal(SIGBREAK, current_handler);
+	poor_set_cursor_hidden(false);
 	poor_write("\x1B[?1049l");
 }
 
@@ -420,6 +419,7 @@ bool poor_running()
 
 #ifdef POOR_IMPLEMENTATION
 static void poor_blit() {
+	poor_set_cursor_hidden(true);
 	for (int y = 0; y < poor_height(); y++)
 		for (int x = 0; x < poor_width(); x++) {
 			const poor_cell* front = poor_at_pro(poor_front, x, y);
