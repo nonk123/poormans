@@ -8,7 +8,7 @@
 #include <time.h>
 #endif
 
-// TODO: support anything but Windows.
+// TODO: support anything other than Windows.
 #include <windows.h>
 #include <signal.h>
 #include <io.h>
@@ -154,15 +154,12 @@ typedef enum {
 #define poor_memcpy memcpy
 #endif
 
-#ifndef poor_memcmp
-#define poor_memcmp memcmp
-#endif
-
 typedef uint8_t poor_kbd_state[32];
 typedef poor_cell poor_display[POOR_DISPLAY_AREA];
 
-static HANDLE poor_input, poor_output;
-static HWND poor_window;
+static HANDLE poor_input = INVALID_HANDLE_VALUE, poor_output = INVALID_HANDLE_VALUE,
+	      poor_original_output = INVALID_HANDLE_VALUE;
+static HWND poor_window = INVALID_HANDLE_VALUE;
 
 static char poor_title_buf[128] = POOR_DEFAULT_TITLE;
 
@@ -183,8 +180,7 @@ static void poor_set_cursor_hidden(bool value) {
 static void poor_fetch_window_size() {
 	CONSOLE_SCREEN_BUFFER_INFO csbi = {0};
 	GetConsoleScreenBufferInfo(poor_output, &csbi);
-	int new_width = csbi.srWindow.Right - csbi.srWindow.Left + 1,
-	    new_height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+	int new_width = csbi.srWindow.Right - csbi.srWindow.Left, new_height = csbi.srWindow.Bottom - csbi.srWindow.Top;
 	if (new_width > POOR_MAX_WIDTH)
 		new_width = POOR_MAX_WIDTH;
 	if (new_height > POOR_MAX_HEIGHT)
@@ -200,7 +196,7 @@ static poor_cell* poor_at_pro(poor_cell* ptr, int x, int y) {
 	static poor_cell deflt = {0};
 	if (x < 0 || y < 0 || x >= poor_width() || y >= poor_height())
 		return &deflt;
-	return &ptr[y * poor_width() + x];
+	return &ptr[y * POOR_MAX_WIDTH + x];
 }
 
 int poor_width() {
@@ -228,6 +224,29 @@ poor_cell* poor_at(int x, int y)
 #ifdef POOR_IMPLEMENTATION
 {
 	return poor_at_pro(poor_front, x, y);
+}
+#else
+	;
+#endif
+
+/// Print a string at specified coordinates.
+///
+/// Doesn't wrap or do anything smart. If you need colors and/or formatting, loop over the cells manually.
+void poor_printf(int x, int y, const char* format, ...)
+#ifdef POOR_IMPLEMENTATION
+{
+	static char buf[64] = {0};
+
+	va_list args = {0};
+	va_start(args, format);
+	vsnprintf(buf, sizeof(buf), format, args);
+	va_end(args);
+
+	for (char* ptr = buf; *ptr; ptr++, x++) {
+		poor_at(x, y)->bg = POOR_BLACK;
+		poor_at(x, y)->fg = POOR_GRAY;
+		poor_at(x, y)->chr = *ptr;
+	}
 }
 #else
 	;
@@ -281,10 +300,13 @@ static void poor_handle_break(int signal) {
 void poor_init()
 #ifdef POOR_IMPLEMENTATION
 {
-	poor_input = GetStdHandle(STD_INPUT_HANDLE), poor_output = GetStdHandle(STD_OUTPUT_HANDLE);
-	SetConsoleMode(poor_input, ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS);
+	poor_original_output = GetStdHandle(STD_OUTPUT_HANDLE), poor_input = GetStdHandle(STD_INPUT_HANDLE);
+	poor_output = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
+	SetConsoleActiveScreenBuffer(poor_output);
+	SetConsoleMode(poor_input, (ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~ENABLE_QUICK_EDIT_MODE);
 	poor_window = GetConsoleWindow();
 	signal(SIGBREAK, poor_handle_break);
+	poor_memset(poor_back, 0, sizeof(poor_back));
 }
 #else
 	;
@@ -296,32 +318,9 @@ static void poor_cleanup() {
 	void (*current_handler)(int) = signal(SIGBREAK, SIG_DFL);
 	if (current_handler != poor_handle_break)
 		signal(SIGBREAK, current_handler);
-
-	SetConsoleTextAttribute(poor_output, POOR_GRAY);
-	poor_set_cursor_hidden(false);
+	CloseHandle(poor_output);
+	SetConsoleActiveScreenBuffer(poor_original_output);
 }
-#endif
-
-/// Return false if program requests exit. Should be the condition inside `for` boilerplate.
-bool poor_running()
-#ifdef POOR_IMPLEMENTATION
-{
-	poor_frame_start = clock();
-	poor_fetch_window_size();
-	for (int i = 0; i < POOR_DISPLAY_AREA; i++) {
-		poor_front[i].fg = POOR_GRAY;
-		poor_front[i].bg = POOR_BLACK;
-		poor_front[i].chr = ' ';
-	}
-	if (poor_request_exit)
-		poor_cleanup();
-	return !poor_request_exit;
-}
-#else
-	;
-#endif
-
-#ifdef POOR_IMPLEMENTATION
 
 static void poor_handle_input() {
 	DWORD count = 0, i = 0;
@@ -350,43 +349,17 @@ static void poor_handle_input() {
 	}
 }
 
-static void poor_blit() {
-	int console_x = -2, console_y = 0, console_fg = -1, console_bg = -1;
-	for (int y = 0; y < poor_height(); y++)
-		for (int x = 0; x < poor_width(); x++) {
-			const poor_cell* front = poor_at_pro(poor_front, x, y);
-			poor_cell* back = poor_at_pro(poor_back, x, y);
-			if (!poor_memcmp(front, back, sizeof(poor_cell)))
-				continue;
-
-			if (console_y != y || console_x != x - 1) {
-				COORD coord = {0};
-				coord.X = (int16_t)x, coord.Y = (int16_t)y;
-				SetConsoleCursorPosition(poor_output, coord);
-			}
-			console_x = x, console_y = y;
-
-			if (front->fg != console_fg || front->bg != console_bg)
-				SetConsoleTextAttribute(poor_output, (front->bg << 4) | front->fg);
-			console_fg = front->fg, console_bg = front->bg;
-
-			write(1, &front->chr, 1);
-			*back = *front;
-		}
-}
-
 static int poor_vsync_refresh_rate() {
-	HWND hwndConsole = GetConsoleWindow();
-	if (!hwndConsole)
+	if (poor_window == INVALID_HANDLE_VALUE)
 		goto fail;
 
-	HMONITOR hMonitor = MonitorFromWindow(hwndConsole, MONITOR_DEFAULTTONEAREST);
-	if (hMonitor == NULL)
+	HMONITOR hmon = MonitorFromWindow(poor_window, MONITOR_DEFAULTTONEAREST);
+	if (hmon == NULL)
 		goto fail;
 
 	MONITORINFOEX mi;
 	mi.cbSize = sizeof(mi);
-	if (!GetMonitorInfo(hMonitor, (MONITORINFO*)&mi))
+	if (!GetMonitorInfo(hmon, (MONITORINFO*)&mi))
 		goto fail;
 
 	DEVMODE dm = {0};
@@ -403,25 +376,74 @@ fail:
 	return POOR_DEFAULT_REFRESH_HZ;
 }
 
+#endif
+
+/// Return false if program requests exit. Should be the condition inside `for` boilerplate.
+bool poor_running()
+#ifdef POOR_IMPLEMENTATION
+{
+	if (poor_request_exit) {
+		poor_cleanup();
+		return false;
+	}
+
+	poor_frame_start = clock();
+	poor_fetch_window_size();
+	for (int i = 0; i < POOR_DISPLAY_AREA; i++) {
+		poor_front[i].fg = POOR_GRAY;
+		poor_front[i].bg = POOR_BLACK;
+		poor_front[i].chr = ' ';
+	}
+	poor_handle_input();
+	return true;
+}
+#else
+	;
+#endif
+
+#ifdef POOR_IMPLEMENTATION
+static void poor_blit() {
+	int actual_x = -2, actual_y = 0, actual_fg = -1, actual_bg = -1;
+	for (int y = 0; y < poor_height(); y++)
+		for (int x = 0; x < poor_width(); x++) {
+			const poor_cell* front = poor_at_pro(poor_front, x, y);
+			poor_cell* back = poor_at_pro(poor_back, x, y);
+			if (front->fg == back->fg && front->bg == back->bg && front->chr == back->chr)
+				continue;
+
+			if (y != actual_y || actual_x != x - 1) {
+				COORD coord = {.X = (SHORT)x, .Y = (SHORT)y};
+				SetConsoleCursorPosition(poor_output, coord);
+			}
+			actual_x = x, actual_y = y;
+
+			if ((int)front->fg != actual_fg || (int)front->bg != actual_bg)
+				SetConsoleTextAttribute(poor_output, (front->bg << 4) | front->fg);
+			actual_fg = front->fg, actual_bg = front->bg;
+
+			WriteConsoleA(poor_output, &front->chr, 1, NULL, NULL);
+		}
+	poor_memcpy(poor_back, poor_front, sizeof(poor_display));
+}
+
 static void poor_end_frame() {
 	const double refresh_rate = 1.0 / (double)poor_vsync_refresh_rate();
-	const clock_t frame_end = clock();
-
-	poor_raw_dt = (double)(((uint64_t)frame_end) - ((uint64_t)poor_frame_start)) / (double)CLOCKS_PER_SEC;
+	poor_raw_dt = ((double)(clock() - poor_frame_start)) / (double)CLOCKS_PER_SEC;
 	if (poor_raw_dt < refresh_rate) {
 		Sleep((DWORD)(1000 * (refresh_rate - poor_raw_dt)));
 		poor_raw_dt = refresh_rate;
 	}
 }
-
 #endif
 
 /// Finalize poormans frame. Should be the increment inside `for` boilerplate.
 void poor_tick()
 #ifdef POOR_IMPLEMENTATION
 {
+#if 1
+	poor_printf(0, 0, "% 3dHz", poor_vsync_refresh_rate());
+#endif
 	SetConsoleTitle(poor_title_buf);
-	poor_handle_input();
 	poor_blit();
 	poor_end_frame();
 }
