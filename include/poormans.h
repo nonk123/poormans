@@ -435,7 +435,7 @@ static void poor_blit() {
 	FlushFileBuffers(poor_output);
 }
 
-static double poor_elapsed = 0.0;
+static double poor_elapsed = 0.0, poor_fps = 0.0;
 static uint64_t poor_ticks = 0;
 
 static void poor_end_frame() {
@@ -446,8 +446,11 @@ static void poor_end_frame() {
 		poor_raw_dt = refresh_rate;
 	}
 
-	poor_elapsed += poor_raw_dt;
-	poor_ticks++;
+	poor_ticks++, poor_elapsed += poor_raw_dt;
+	if (poor_elapsed >= 1.0)
+		poor_fps = (double)poor_ticks / poor_elapsed;
+	while (poor_elapsed >= 1.0)
+		poor_ticks = 0, poor_elapsed -= 1.0;
 }
 #endif
 
@@ -456,7 +459,7 @@ void poor_tick()
 #ifdef POOR_IMPLEMENTATION
 {
 #if 1
-	poor_printf(0, 0, "% 3dHz % 3.2fFPS", poor_vsync_refresh_rate(), ((double)poor_ticks) / poor_elapsed);
+	poor_printf(0, 0, "% 3dHz % 3.2fFPS", poor_vsync_refresh_rate(), poor_fps);
 #endif
 	SetConsoleTitle(poor_title_buf);
 	poor_blit();
