@@ -459,7 +459,7 @@ void poor_tick()
 #ifdef POOR_IMPLEMENTATION
 {
 #if 1
-	poor_printf(0, 0, "% 3dHz % 3.2fFPS", poor_vsync_refresh_rate(), poor_fps);
+	poor_printf(0, poor_height() - 1, "% 3dHz % 3.2fFPS", poor_vsync_refresh_rate(), poor_fps);
 #endif
 	SetConsoleTitle(poor_title_buf);
 	poor_blit();
