@@ -182,12 +182,6 @@ static void poor_write(const char* format, ...) {
 	WriteFile(poor_output, buf, strnlen(buf, sizeof(buf)), NULL, NULL);
 }
 
-static void poor_set_cursor_hidden(bool value) {
-	CONSOLE_CURSOR_INFO info = {0};
-	info.dwSize = 100, info.bVisible = !value;
-	SetConsoleCursorInfo(poor_output, &info);
-}
-
 static void poor_fetch_window_size() {
 	CONSOLE_SCREEN_BUFFER_INFO csbi = {0};
 	GetConsoleScreenBufferInfo(poor_output, &csbi);
@@ -334,7 +328,6 @@ static void poor_cleanup() {
 	void (*current_handler)(int) = signal(SIGBREAK, SIG_DFL);
 	if (current_handler != poor_handle_break)
 		signal(SIGBREAK, current_handler);
-	poor_set_cursor_hidden(false);
 	poor_write("\x1B[?1049l");
 }
 
@@ -419,7 +412,7 @@ bool poor_running()
 
 #ifdef POOR_IMPLEMENTATION
 static void poor_blit() {
-	poor_set_cursor_hidden(true);
+	poor_write("\x1b[?25l");
 	for (int y = 0; y < poor_height(); y++)
 		for (int x = 0; x < poor_width(); x++) {
 			const poor_cell* front = poor_at_pro(poor_front, x, y);
