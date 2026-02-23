@@ -174,9 +174,9 @@ typedef enum {
 	POOR_RUNNING,
 	POOR_GRACEFUL_EXIT,
 	POOR_ERROR_EXIT,
-} poor_exit_status;
+} poor_status_t;
 
-static poor_exit_status poor_exit_value = POOR_RUNNING;
+static poor_status_t poor_status = POOR_RUNNING;
 static clock_t poor_frame_start = 0;
 static double poor_raw_dt = 1.f / POOR_DEFAULT_REFRESH_HZ;
 
@@ -228,7 +228,7 @@ int poor_height() {
 void poor_exit()
 #ifdef POOR_IMPLEMENTATION
 {
-	poor_exit_value = POOR_GRACEFUL_EXIT;
+	poor_status = POOR_GRACEFUL_EXIT;
 }
 #else
 	;
@@ -343,7 +343,7 @@ static void poor_handle_break(int signal) {
 
 #define poor_damn_it()                                                                                                 \
 	do {                                                                                                           \
-		poor_exit_value = POOR_ERROR_EXIT;                                                                     \
+		poor_status = POOR_ERROR_EXIT;                                                                         \
 		return;                                                                                                \
 	} while (0)
 
@@ -446,7 +446,7 @@ fail:
 bool poor_running()
 #ifdef POOR_IMPLEMENTATION
 {
-	if (poor_exit_value) {
+	if (poor_status) {
 		poor_cleanup();
 		return false;
 	}
