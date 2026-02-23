@@ -27,8 +27,11 @@
 
 #define WHILE_POOR for (poor_init(); poor_running(); poor_tick())
 
+typedef uint8_t poor_char;
+
 typedef struct {
-	uint8_t fg : 4, bg : 4, chr;
+	uint8_t fg : 4, bg : 4;
+	poor_char chr;
 } poor_cell;
 
 /// Return console buffer width in character increments.
@@ -167,11 +170,20 @@ static int poor_window_width = 0, poor_window_height = 0;
 static poor_display poor_front = {0}, poor_back = {0};
 static poor_kbd_state poor_kbd_now = {0}, poor_kbd_just = {0};
 
-static bool poor_request_exit = 0;
+typedef enum {
+	POOR_RUNNING,
+	POOR_GRACEFUL_EXIT,
+	POOR_ERROR_EXIT,
+} poor_exit_status;
+
+static poor_exit_status poor_exit_value = POOR_RUNNING;
 static clock_t poor_frame_start = 0;
 static double poor_raw_dt = 1.f / POOR_DEFAULT_REFRESH_HZ;
 
 static void poor_write(const char* format, ...) {
+	if (poor_output == INVALID_HANDLE_VALUE)
+		return;
+
 	static char buf[32] = {0};
 
 	va_list args = {0};
@@ -216,7 +228,7 @@ int poor_height() {
 void poor_exit()
 #ifdef POOR_IMPLEMENTATION
 {
-	poor_request_exit = true;
+	poor_exit_value = POOR_GRACEFUL_EXIT;
 }
 #else
 	;
@@ -227,6 +239,36 @@ poor_cell* poor_at(int x, int y)
 #ifdef POOR_IMPLEMENTATION
 {
 	return poor_at_pro(poor_front, x, y);
+}
+#else
+	;
+#endif
+
+/// Shorthand for `poor_at` which sets a cell's foreground color.
+void poor_fg(int x, int y, poor_color fg)
+#ifdef POOR_IMPLEMENTATION
+{
+	poor_at(x, y)->fg = fg;
+}
+#else
+	;
+#endif
+
+/// Shorthand for `poor_at` which sets a cell's background color.
+void poor_bg(int x, int y, poor_color bg)
+#ifdef POOR_IMPLEMENTATION
+{
+	poor_at(x, y)->bg = bg;
+}
+#else
+	;
+#endif
+
+/// Shorthand for `poor_at` which sets a cell's character.
+void poor_ch(int x, int y, poor_char chr)
+#ifdef POOR_IMPLEMENTATION
+{
+	poor_at(x, y)->chr = chr;
 }
 #else
 	;
@@ -246,9 +288,9 @@ void poor_printf(int x, int y, const char* format, ...)
 	va_end(args);
 
 	for (char* ptr = buf; *ptr; ptr++, x++) {
-		poor_at(x, y)->bg = POOR_BLACK;
-		poor_at(x, y)->fg = POOR_WHITE;
-		poor_at(x, y)->chr = *ptr;
+		poor_bg(x, y, POOR_BLACK);
+		poor_fg(x, y, POOR_WHITE);
+		poor_ch(x, y, *ptr);
 	}
 }
 #else
@@ -294,9 +336,17 @@ bool poor_key_pressed(poor_key scancode)
 #endif
 
 #ifdef POOR_IMPLEMENTATION
+
 static void poor_handle_break(int signal) {
 	(void)signal, poor_exit();
 }
+
+#define poor_damn_it()                                                                                                 \
+	do {                                                                                                           \
+		poor_exit_value = POOR_ERROR_EXIT;                                                                     \
+		return;                                                                                                \
+	} while (0)
+
 #endif
 
 /// Initialize poormans. Should be the initializer inside `for` boilerplate.
@@ -304,6 +354,11 @@ void poor_init()
 #ifdef POOR_IMPLEMENTATION
 {
 	poor_output = GetStdHandle(STD_OUTPUT_HANDLE), poor_input = GetStdHandle(STD_INPUT_HANDLE);
+	poor_window = GetConsoleWindow();
+
+	if (poor_output == INVALID_HANDLE_VALUE || poor_input == INVALID_HANDLE_VALUE
+		|| poor_window == INVALID_HANDLE_VALUE)
+		poor_damn_it();
 
 	DWORD cur_mode = 0;
 	GetConsoleMode(poor_output, &cur_mode);
@@ -314,7 +369,6 @@ void poor_init()
 
 	poor_write("\x1b[?1049h");
 
-	poor_window = GetConsoleWindow();
 	signal(SIGBREAK, poor_handle_break);
 	poor_memset(poor_back, 0, sizeof(poor_back));
 }
@@ -323,6 +377,7 @@ void poor_init()
 #endif
 
 #ifdef POOR_IMPLEMENTATION
+
 static void poor_cleanup() {
 	// Unset `SIGBREAK` handler only if it's our own. It wouldn't be nice to overwrite someone else's handler.
 	void (*current_handler)(int) = signal(SIGBREAK, SIG_DFL);
@@ -391,7 +446,7 @@ fail:
 bool poor_running()
 #ifdef POOR_IMPLEMENTATION
 {
-	if (poor_request_exit) {
+	if (poor_exit_value) {
 		poor_cleanup();
 		return false;
 	}
@@ -411,6 +466,7 @@ bool poor_running()
 #endif
 
 #ifdef POOR_IMPLEMENTATION
+
 static void poor_blit() {
 	poor_write("\x1b[?25l");
 	for (int y = 0; y < poor_height(); y++)
@@ -445,6 +501,7 @@ static void poor_end_frame() {
 	while (poor_elapsed >= 1.0)
 		poor_ticks = 0, poor_elapsed -= 1.0;
 }
+
 #endif
 
 /// Finalize poormans frame. Should be the increment inside `for` boilerplate.
