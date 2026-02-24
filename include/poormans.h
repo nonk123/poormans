@@ -477,8 +477,8 @@ static void poor_blit() {
 				continue;
 			poor_write("\x1b[0;%d;%dm\x1b[%d;%dH%c", 30 + front->fg + 52 * (front->fg >= 8),
 				40 + front->bg + 52 * (front->bg >= 8), y + 1, x + 1, front->chr);
+			poor_memcpy(back, front, sizeof(poor_cell));
 		}
-	poor_memcpy(poor_back, poor_front, sizeof(poor_display));
 	FlushFileBuffers(poor_output);
 }
 
