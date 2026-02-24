@@ -25,6 +25,10 @@
 #define POOR_DEFAULT_REFRESH_HZ (60)
 #endif
 
+#ifndef POOR_BATCH_SIZE
+#define POOR_BATCH_SIZE (8192)
+#endif
+
 #define WHILE_POOR for (poor_init(); poor_running(); poor_tick())
 
 typedef uint8_t poor_char;
@@ -180,31 +184,22 @@ static poor_status_t poor_status = POOR_RUNNING;
 static clock_t poor_frame_start = 0;
 static double poor_raw_dt = 1.f / POOR_DEFAULT_REFRESH_HZ;
 
-static void poor_write(const char* format, ...) {
-	if (poor_output == INVALID_HANDLE_VALUE)
-		return;
-
-	static char buf[32] = {0};
-
-	va_list args = {0};
-	va_start(args, format);
-	vsnprintf(buf, sizeof(buf), format, args);
-	va_end(args);
-
-	WriteFile(poor_output, buf, strnlen(buf, sizeof(buf)), NULL, NULL);
+static void poor_write(const char* s) {
+	if (poor_output != INVALID_HANDLE_VALUE)
+		WriteFile(poor_output, s, strlen(s), NULL, NULL);
 }
 
 static void poor_fetch_window_size() {
 	CONSOLE_SCREEN_BUFFER_INFO csbi = {0};
 	GetConsoleScreenBufferInfo(poor_output, &csbi);
-	int new_width = csbi.srWindow.Right - csbi.srWindow.Left, new_height = csbi.srWindow.Bottom - csbi.srWindow.Top;
-	if (new_width > POOR_MAX_WIDTH)
-		new_width = POOR_MAX_WIDTH;
-	if (new_height > POOR_MAX_HEIGHT)
-		new_height = POOR_MAX_HEIGHT;
-	if (poor_window_width != new_width || poor_window_height != new_height)
+	int width = csbi.srWindow.Right - csbi.srWindow.Left + 1, height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+	if (width > POOR_MAX_WIDTH)
+		width = POOR_MAX_WIDTH;
+	if (height > POOR_MAX_HEIGHT)
+		height = POOR_MAX_HEIGHT;
+	if (poor_window_width != width || poor_window_height != height)
 		poor_memset(poor_back, 0, sizeof(poor_back));
-	poor_window_width = new_width, poor_window_height = new_height;
+	poor_window_width = width, poor_window_height = height;
 }
 
 static poor_cell* poor_at_pro(poor_cell* ptr, int x, int y) {
@@ -468,17 +463,34 @@ bool poor_running()
 #ifdef POOR_IMPLEMENTATION
 
 static void poor_blit() {
-	poor_write("\x1b[?25l");
+	static char batch[POOR_BATCH_SIZE + 1] = {0}, cell[128] = {0};
+	poor_memset(batch, 0, sizeof(batch));
+	size_t point = 0;
+
 	for (int y = 0; y < poor_height(); y++)
 		for (int x = 0; x < poor_width(); x++) {
 			const poor_cell* front = poor_at_pro(poor_front, x, y);
 			poor_cell* back = poor_at_pro(poor_back, x, y);
+
 			if (front->fg == back->fg && front->bg == back->bg && front->chr == back->chr)
 				continue;
-			poor_write("\x1b[0;%d;%dm\x1b[%d;%dH%c", 30 + front->fg + 52 * (front->fg >= 8),
-				40 + front->bg + 52 * (front->bg >= 8), y + 1, x + 1, front->chr);
+
+			size_t wrote = snprintf(cell, sizeof(cell), "\x1b[0;%d;%dm\x1b[%d;%dH%c",
+				30 + front->fg + 52 * (front->fg >= 8), 40 + front->bg + 52 * (front->bg >= 8), y + 1,
+				x + 1, front->chr);
+
+			if (point + wrote >= sizeof(batch))
+				goto flush;
+
+			poor_memcpy(batch + point, cell, wrote);
+			point += wrote;
+
 			poor_memcpy(back, front, sizeof(poor_cell));
 		}
+
+flush:
+	poor_write("\x1b[?25l");
+	poor_write(batch);
 	FlushFileBuffers(poor_output);
 }
 
