@@ -464,8 +464,7 @@ bool poor_running()
 
 static void poor_blit() {
 	static char batch[POOR_BATCH_SIZE + 1] = {0}, cell[128] = {0};
-	poor_memset(batch, 0, sizeof(batch));
-	size_t point = 0;
+	size_t point = snprintf(batch, sizeof(batch), "\x1b[?25l");
 
 	for (int y = 0; y < poor_height(); y++)
 		for (int x = 0; x < poor_width(); x++) {
@@ -479,7 +478,7 @@ static void poor_blit() {
 				30 + front->fg + 52 * (front->fg >= 8), 40 + front->bg + 52 * (front->bg >= 8), y + 1,
 				x + 1, front->chr);
 
-			if (point + wrote >= sizeof(batch))
+			if (point + wrote > POOR_BATCH_SIZE)
 				goto flush;
 
 			poor_memcpy(batch + point, cell, wrote);
@@ -489,7 +488,7 @@ static void poor_blit() {
 		}
 
 flush:
-	poor_write("\x1b[?25l");
+	batch[point] = 0;
 	poor_write(batch);
 	FlushFileBuffers(poor_output);
 }
