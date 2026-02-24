@@ -464,7 +464,10 @@ bool poor_running()
 
 static void poor_blit() {
 	static char batch[POOR_BATCH_SIZE + 1] = {0}, cell[128] = {0};
-	size_t point = snprintf(batch, sizeof(batch), "\x1b[?25l");
+
+	int point = snprintf(batch, sizeof(batch), "\x1b[?25l");
+	if (point < 0)
+		poor_damn_it();
 
 	for (int y = 0; y < poor_height(); y++)
 		for (int x = 0; x < poor_width(); x++) {
@@ -474,9 +477,11 @@ static void poor_blit() {
 			if (front->fg == back->fg && front->bg == back->bg && front->chr == back->chr)
 				continue;
 
-			size_t wrote = snprintf(cell, sizeof(cell), "\x1b[0;%d;%dm\x1b[%d;%dH%c",
+			int wrote = snprintf(cell, sizeof(cell), "\x1b[0;%d;%dm\x1b[%d;%dH%c",
 				30 + front->fg + 52 * (front->fg >= 8), 40 + front->bg + 52 * (front->bg >= 8), y + 1,
 				x + 1, front->chr);
+			if (wrote < 0)
+				continue;
 
 			if (point + wrote > POOR_BATCH_SIZE)
 				goto flush;
