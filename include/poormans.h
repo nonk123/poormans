@@ -177,7 +177,7 @@ static char poor_title_buf[128] = POOR_DEFAULT_TITLE;
 
 static int poor_window_width = 0, poor_window_height = 0;
 static poor_display poor_front = {0}, poor_back = {0};
-static poor_kbd_state poor_kbd_now = {0}, poor_kbd_just = {0};
+static poor_kbd_state poor_kbd_now = {0}, poor_kbd_prev = {0};
 
 typedef enum {
 	POOR_RUNNING,
@@ -359,7 +359,7 @@ bool poor_key_down(poor_key scancode)
 bool poor_key_pressed(poor_key scancode)
 #ifdef POOR_IMPLEMENTATION
 {
-	return poor_key_in(poor_kbd_just, scancode);
+	return poor_key_down(scancode) && !poor_key_in(poor_kbd_prev, scancode);
 }
 #else
 	;
@@ -429,7 +429,7 @@ static void poor_cleanup() {
 }
 
 static void poor_handle_input() {
-	poor_memset(&poor_kbd_just, 0, sizeof(poor_kbd_just));
+	poor_memcpy(poor_kbd_prev, poor_kbd_now, sizeof(poor_kbd_state));
 
 	DWORD count = 0, i = 0;
 	GetNumberOfConsoleInputEvents(poor_input, &count);
@@ -447,12 +447,10 @@ static void poor_handle_input() {
 		if (kbd <= POOR_KEY_MIN || kbd >= POOR_KEY_MAX)
 			continue;
 		const uint8_t mask = 1 << (kbd % 8);
-		if (event.bKeyDown) {
+		if (event.bKeyDown)
 			poor_kbd_now[kbd / 8] |= mask;
-			poor_kbd_just[kbd / 8] |= mask;
-		} else {
+		else
 			poor_kbd_now[kbd / 8] &= ~mask;
-		}
 	}
 }
 
