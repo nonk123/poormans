@@ -378,6 +378,8 @@ void poor_init()
 		|| poor_window == INVALID_HANDLE_VALUE)
 		poor_damn_it();
 
+	ShowScrollBar(poor_window, SB_VERT, 0);
+
 	DWORD cur_mode = 0;
 	GetConsoleMode(poor_output, &cur_mode);
 	SetConsoleMode(poor_output, cur_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN);
