@@ -11,7 +11,6 @@
 // TODO: support anything other than Windows.
 #include <windows.h>
 #include <signal.h>
-#include <io.h>
 
 #define POOR_MAX_WIDTH (400)
 #define POOR_MAX_HEIGHT (140)
@@ -342,7 +341,7 @@ void poor_title(const char* title)
 
 #ifdef POOR_IMPLEMENTATION
 static bool poor_key_in(const poor_kbd_state kbd, poor_key scancode) {
-	return !!(kbd[scancode / 8] & (1 << (scancode % 8)));
+	return (kbd[scancode / 8] & (1 << (scancode % 8))) != 0;
 }
 #endif
 
@@ -430,14 +429,15 @@ static void poor_cleanup() {
 }
 
 static void poor_handle_input() {
+	poor_memset(&poor_kbd_just, 0, sizeof(poor_kbd_just));
+
 	DWORD count = 0, i = 0;
 	GetNumberOfConsoleInputEvents(poor_input, &count);
 	if (!count)
 		return;
 
-	INPUT_RECORD records[10] = {0};
+	INPUT_RECORD records[16] = {0};
 	ReadConsoleInput(poor_input, records, sizeof(records) / sizeof(*records), &count);
-	poor_memset(&poor_kbd_just, 0, sizeof(poor_kbd_just));
 
 	for (; i < count; i++) {
 		if (records[i].EventType != KEY_EVENT)
@@ -456,7 +456,12 @@ static void poor_handle_input() {
 	}
 }
 
-static int poor_vsync_refresh_rate() {
+#endif
+
+/// Determine the vsynced refresh rate for the monitor the console window is on.
+int poor_refresh_rate()
+#ifdef POOR_IMPLEMENTATION
+{
 	if (poor_window == INVALID_HANDLE_VALUE)
 		goto fail;
 
@@ -464,7 +469,7 @@ static int poor_vsync_refresh_rate() {
 	if (hmon == NULL)
 		goto fail;
 
-	MONITORINFOEX mi;
+	MONITORINFOEX mi = {0};
 	mi.cbSize = sizeof(mi);
 	if (!GetMonitorInfo(hmon, (MONITORINFO*)&mi))
 		goto fail;
@@ -482,7 +487,8 @@ static int poor_vsync_refresh_rate() {
 fail:
 	return POOR_DEFAULT_REFRESH_HZ;
 }
-
+#else
+	;
 #endif
 
 /// Return false if program requests exit. Should be the condition inside `for` boilerplate.
@@ -496,12 +502,15 @@ bool poor_running()
 
 	poor_frame_start = clock();
 	poor_fetch_window_size();
+
 	for (int i = 0; i < POOR_DISPLAY_AREA; i++) {
 		poor_front[i].fg = POOR_GRAY;
 		poor_front[i].bg = POOR_BLACK;
 		poor_front[i].chr = ' ';
 	}
+
 	poor_handle_input();
+
 	return true;
 }
 #else
@@ -544,7 +553,7 @@ static double poor_elapsed = 0.0, poor_fps = 0.0;
 static uint64_t poor_ticks = 0;
 
 static void poor_end_frame() {
-	const double refresh_rate = 1.0 / (double)poor_vsync_refresh_rate();
+	const double refresh_rate = 1.0 / (double)poor_refresh_rate();
 	poor_raw_dt = ((double)(clock() - poor_frame_start)) / (double)CLOCKS_PER_SEC;
 	if (poor_raw_dt < refresh_rate) {
 		Sleep((DWORD)(1000 * (refresh_rate - poor_raw_dt)));
@@ -565,8 +574,9 @@ void poor_tick()
 #ifdef POOR_IMPLEMENTATION
 {
 #if 1
-	poor_printf(0, poor_height() - 1, "% 3dHz % 3.2fFPS", poor_vsync_refresh_rate(), poor_fps);
+	poor_printf(0, poor_height() - 1, "% 3dHz % 3.2fFPS", poor_refresh_rate(), poor_fps);
 #endif
+
 	SetConsoleTitle(poor_title_buf);
 	poor_blit();
 	poor_end_frame();
