@@ -218,6 +218,11 @@ static void poor_write(const char* fmt, ...) {
 	poor_batch_point += len;
 }
 
+static void poor_hide_scrollbars() {
+	ShowScrollBar(poor_window, SB_VERT, 0);
+	ShowScrollBar(poor_window, SB_HORZ, 0);
+}
+
 static void poor_fetch_window_size() {
 	CONSOLE_SCREEN_BUFFER_INFO csbi = {0};
 	GetConsoleScreenBufferInfo(poor_output, &csbi);
@@ -226,8 +231,10 @@ static void poor_fetch_window_size() {
 		width = POOR_MAX_WIDTH;
 	if (height > POOR_MAX_HEIGHT)
 		height = POOR_MAX_HEIGHT;
-	if (poor_window_width != width || poor_window_height != height)
+	if (poor_window_width != width || poor_window_height != height) {
 		poor_memset(poor_back, 0, sizeof(poor_back));
+		poor_hide_scrollbars();
+	}
 	poor_window_width = width, poor_window_height = height;
 }
 
@@ -380,7 +387,7 @@ void poor_init()
 		|| poor_window == INVALID_HANDLE_VALUE)
 		poor_damn_it();
 
-	ShowScrollBar(poor_window, SB_VERT, 0);
+	poor_hide_scrollbars();
 
 	GetConsoleMode(poor_output, &poor_last_output_mode);
 	SetConsoleMode(
