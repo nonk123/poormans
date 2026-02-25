@@ -371,7 +371,7 @@ static void poor_handle_break(int signal) {
 	(void)signal, poor_exit();
 }
 
-static DWORD poor_last_input_mode = 0, poor_last_output_mode = 0;
+static DWORD poor_orig_input_mode = 0, poor_orig_output_mode = 0;
 
 #endif
 
@@ -388,13 +388,13 @@ void poor_init()
 
 	poor_hide_scrollbars();
 
-	GetConsoleMode(poor_output, &poor_last_output_mode);
+	GetConsoleMode(poor_output, &poor_orig_output_mode);
 	SetConsoleMode(
-		poor_output, poor_last_output_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN);
+		poor_output, poor_orig_output_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN);
 
-	GetConsoleMode(poor_input, &poor_last_input_mode);
+	GetConsoleMode(poor_input, &poor_orig_input_mode);
 	SetConsoleMode(poor_input,
-		(poor_last_input_mode | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~ENABLE_QUICK_EDIT_MODE);
+		(poor_orig_input_mode | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~ENABLE_QUICK_EDIT_MODE);
 
 	poor_write("\x1b[?1049h");
 	poor_flush();
@@ -424,8 +424,8 @@ static void poor_cleanup() {
 	poor_write("\x1B[?1049l");
 	poor_flush();
 
-	SetConsoleMode(poor_output, poor_last_output_mode);
-	SetConsoleMode(poor_input, poor_last_input_mode);
+	SetConsoleMode(poor_output, poor_orig_output_mode);
+	SetConsoleMode(poor_input, poor_orig_input_mode);
 }
 
 static void poor_handle_input() {
