@@ -162,6 +162,12 @@ typedef enum {
 #define poor_memcpy memcpy
 #endif
 
+#define poor_damn_it()                                                                                                 \
+	do {                                                                                                           \
+		poor_status = POOR_ERROR_EXIT;                                                                         \
+		return;                                                                                                \
+	} while (0)
+
 typedef uint8_t poor_kbd_state[32];
 typedef poor_cell poor_display[POOR_DISPLAY_AREA];
 
@@ -184,9 +190,32 @@ static poor_status_t poor_status = POOR_RUNNING;
 static clock_t poor_frame_start = 0;
 static double poor_raw_dt = 1.f / POOR_DEFAULT_REFRESH_HZ;
 
-static void poor_write(const char* s) {
-	if (poor_output != INVALID_HANDLE_VALUE)
-		WriteFile(poor_output, s, strlen(s), NULL, NULL);
+static char poor_batch[POOR_BATCH_SIZE] = {0}, *poor_batch_point = poor_batch;
+
+static void poor_flush() {
+	if (poor_output != INVALID_HANDLE_VALUE) {
+		WriteFile(poor_output, poor_batch, poor_batch_point - poor_batch, NULL, NULL);
+		FlushFileBuffers(poor_output);
+	}
+	poor_batch_point = poor_batch;
+}
+
+static void poor_write(const char* fmt, ...) {
+	static char buf[128] = {0};
+
+	va_list args = {0};
+	va_start(args, fmt);
+	int len = vsnprintf(buf, sizeof(buf), fmt, args);
+	va_end(args);
+
+	if (len < 0 || len > POOR_BATCH_SIZE)
+		poor_damn_it();
+
+	if (poor_batch_point - poor_batch + len > POOR_BATCH_SIZE)
+		poor_flush();
+
+	poor_memcpy(poor_batch_point, buf, len);
+	poor_batch_point += len;
 }
 
 static void poor_fetch_window_size() {
@@ -336,12 +365,6 @@ static void poor_handle_break(int signal) {
 	(void)signal, poor_exit();
 }
 
-#define poor_damn_it()                                                                                                 \
-	do {                                                                                                           \
-		poor_status = POOR_ERROR_EXIT;                                                                         \
-		return;                                                                                                \
-	} while (0)
-
 #endif
 
 /// Initialize poormans. Should be the initializer inside `for` boilerplate.
@@ -363,6 +386,7 @@ void poor_init()
 	SetConsoleMode(poor_input, (cur_mode | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~ENABLE_QUICK_EDIT_MODE);
 
 	poor_write("\x1b[?1049h");
+	poor_flush();
 
 	signal(SIGBREAK, poor_handle_break);
 	poor_memset(poor_back, 0, sizeof(poor_back));
@@ -379,6 +403,7 @@ static void poor_cleanup() {
 	if (current_handler != poor_handle_break)
 		signal(SIGBREAK, current_handler);
 	poor_write("\x1B[?1049l");
+	poor_flush();
 }
 
 static void poor_handle_input() {
@@ -463,11 +488,9 @@ bool poor_running()
 #ifdef POOR_IMPLEMENTATION
 
 static void poor_blit() {
-	static char batch[POOR_BATCH_SIZE + 1] = {0}, cell[128] = {0};
+	int last_x = -2, last_y = 0, last_fg = -1, last_bg = -1;
 
-	int point = snprintf(batch, sizeof(batch), "\x1b[?25l");
-	if (point < 0)
-		poor_damn_it();
+	poor_write("\x1b[?25l");
 
 	for (int y = 0; y < poor_height(); y++)
 		for (int x = 0; x < poor_width(); x++) {
@@ -477,25 +500,21 @@ static void poor_blit() {
 			if (front->fg == back->fg && front->bg == back->bg && front->chr == back->chr)
 				continue;
 
-			int wrote = snprintf(cell, sizeof(cell), "\x1b[0;%d;%dm\x1b[%d;%dH%c",
-				30 + front->fg + 52 * (front->fg >= 8), 40 + front->bg + 52 * (front->bg >= 8), y + 1,
-				x + 1, front->chr);
-			if (wrote < 0)
-				continue;
+			if (last_x != x - 1 || last_y != y)
+				poor_write("\x1b[%d;%dH", y + 1, x + 1);
+			last_x = x, last_y = y;
 
-			if (point + wrote > POOR_BATCH_SIZE)
-				goto flush;
+			if (last_fg != front->fg || last_bg != front->bg)
+				poor_write("\x1b[0;%d;%dm", 30 + front->fg + 52 * (front->fg >= 8),
+					40 + front->bg + 52 * (front->bg >= 8));
+			last_fg = front->fg, last_bg = front->bg;
 
-			poor_memcpy(batch + point, cell, wrote);
-			point += wrote;
+			poor_write("%c", front->chr);
 
 			poor_memcpy(back, front, sizeof(poor_cell));
 		}
 
-flush:
-	batch[point] = 0;
-	poor_write(batch);
-	FlushFileBuffers(poor_output);
+	poor_flush();
 }
 
 static double poor_elapsed = 0.0, poor_fps = 0.0;
