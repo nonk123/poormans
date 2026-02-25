@@ -365,6 +365,8 @@ static void poor_handle_break(int signal) {
 	(void)signal, poor_exit();
 }
 
+static DWORD poor_last_input_mode = 0, poor_last_output_mode = 0;
+
 #endif
 
 /// Initialize poormans. Should be the initializer inside `for` boilerplate.
@@ -380,17 +382,20 @@ void poor_init()
 
 	ShowScrollBar(poor_window, SB_VERT, 0);
 
-	DWORD cur_mode = 0;
-	GetConsoleMode(poor_output, &cur_mode);
-	SetConsoleMode(poor_output, cur_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN);
+	GetConsoleMode(poor_output, &poor_last_output_mode);
+	SetConsoleMode(
+		poor_output, poor_last_output_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN);
 
-	GetConsoleMode(poor_input, &cur_mode);
-	SetConsoleMode(poor_input, (cur_mode | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~ENABLE_QUICK_EDIT_MODE);
+	GetConsoleMode(poor_input, &poor_last_input_mode);
+	SetConsoleMode(poor_input,
+		(poor_last_input_mode | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~ENABLE_QUICK_EDIT_MODE);
 
 	poor_write("\x1b[?1049h");
 	poor_flush();
 
+	signal(SIGINT, poor_handle_break);
 	signal(SIGBREAK, poor_handle_break);
+
 	poor_memset(poor_back, 0, sizeof(poor_back));
 }
 #else
@@ -399,13 +404,22 @@ void poor_init()
 
 #ifdef POOR_IMPLEMENTATION
 
-static void poor_cleanup() {
-	// Unset `SIGBREAK` handler only if it's our own. It wouldn't be nice to overwrite someone else's handler.
-	void (*current_handler)(int) = signal(SIGBREAK, SIG_DFL);
+static void poor_unset_signal_handler(int sig) {
+	// Unset handler only if it's our own. It wouldn't be nice to overwrite someone else's handler.
+	void (*current_handler)(int) = signal(sig, SIG_DFL);
 	if (current_handler != poor_handle_break)
-		signal(SIGBREAK, current_handler);
+		signal(sig, current_handler);
+}
+
+static void poor_cleanup() {
+	poor_unset_signal_handler(SIGBREAK);
+	poor_unset_signal_handler(SIGINT);
+
 	poor_write("\x1B[?1049l");
 	poor_flush();
+
+	SetConsoleMode(poor_output, poor_last_output_mode);
+	SetConsoleMode(poor_input, poor_last_input_mode);
 }
 
 static void poor_handle_input() {
